@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { TypeOrmModuleOptions, TypeOrmOptionsFactory } from '@nestjs/typeorm';
+import { Grupo } from '../grupo/entities/grupo.entity';
 
 @Injectable()
 export class DevService implements TypeOrmOptionsFactory {
@@ -11,7 +12,7 @@ export class DevService implements TypeOrmOptionsFactory {
       username: 'root',
       password: 'root',
       database: 'db_osiris',
-      entities: [],
+      entities: [Grupo],
       synchronize: true,
     };
   }

@@ -1,14 +1,12 @@
-import { Column, Entity, PrimaryGeneratedColumn} from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { IsNotEmpty } from 'class-validator';
 
-@Entity({name: 'grupos'})
+@Entity({ name: 'grupos' })
 export class Grupo {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @IsNotEmpty()
-  @Column({length: 70, nullable: false})
-  nome: string;
-
-  
+  @Column({ length: 70, nullable: false })
+  nomeGrupo!: string;
 }
