@@ -1,29 +1,21 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
-import { IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, Matches } from 'class-validator';
 
-//adicionar relacionamentos com tab Usuário, semestre, projetos e candidaturas
-
-@Entity({ name: 'grupos' })
-export class Grupo {
+@Entity({ name: 'empreendedores' })
+export class Empreendedor {
   @PrimaryGeneratedColumn()
-  idGrupo!: number;
-
-  @IsNotEmpty()
-  @Column({ length: 70, nullable: false })
-  nomeGrupo!: string;
-
-  @IsNotEmpty()
-  @Column({ length: 300, nullable: false })
-  descricaoGrupo!: string;
-
-  @IsNotEmpty()
-  @Column({ length: 70, nullable: false })
-  liderGrupo!: string;
+  idEmpreendedor!: number;
 
   @IsNotEmpty()
   @Column({ nullable: false })
-  tamanhoGrupo!: number;
+  usuarioId!: number; // FK para tabela usuário
 
-  @Column({ length: 70 })
-  integrantesGrupo!: string;
+  @IsNotEmpty()
+  @Column({ length: 100, nullable: false })
+  empresa!: string;
+
+  @IsNotEmpty()
+  @Matches(/^\d{14}$/, { message: 'CNPJ deve conter exatamente 14 dígitos numéricos' })
+  @Column({ length: 14, nullable: false })
+  cnpj!: string;
 }
