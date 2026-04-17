@@ -10,47 +10,24 @@ import {
   Post,
   Put,
 } from '@nestjs/common';
-import { GrupoService } from '../services/semestre.service';
-import { Grupo } from '../entities/semestre.entity';
+import { SemestreService } from '../services/semestre.service';
+import { Semestre } from '../entities/semestre.entity';
 
-@Controller('/grupos')
-export class GrupoController {
-  constructor(private readonly grupoService: GrupoService) {}
+@Controller('/semestres')
+export class SemestreController {
+  constructor(private readonly semestreService: SemestreService) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  findAll(): Promise<Grupo[]> {
+  findAll(): Promise<Semestre[]> {
     //importar
-    return this.grupoService.findAll();
+    return this.semestreService.findAll();
   }
 
   @Get('/:id')
   @HttpCode(HttpStatus.OK)
-  findById(@Param('id', ParseIntPipe) id: number): Promise<Grupo[]> {
-    return this.grupoService.findById(id);
+  findById(@Param('id', ParseIntPipe) id: number): Promise<Semestre | null> {
+    return this.semestreService.findById(id);
   }
 
-  @Get('grupo/:nomeGrupo')
-  @HttpCode(HttpStatus.OK)
-  findByName(@Param('nomeGrupo') grupo: string): Promise<Grupo[]> {
-    return this.grupoService.findByName(grupo);
-  }
-
-  @Post()
-  @HttpCode(HttpStatus.CREATED) //code 201
-  create(@Body() grupo: Grupo): Promise<Grupo> {
-    return this.grupoService.create(grupo);
-  }
-
-  @Put()
-  @HttpCode(HttpStatus.OK)
-  update(@Body() grupo: Grupo): Promise<Grupo> {
-    return this.grupoService.update(grupo);
-  }
-
-  @Delete('/:id')
-  @HttpCode(HttpStatus.NO_CONTENT) //code 204
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.grupoService.delete(id);
-  }
 }

@@ -1,13 +1,13 @@
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Grupo } from './entities/semestre.entity';
+import { Semestre } from './entities/semestre.entity';
 import { Module } from '@nestjs/common';
-import { GrupoService } from './services/semestre.service';
-import { GrupoController } from './controllers/semestre.controller';
+import { SemestreService } from './services/semestre.service';
+import { SemestreController } from './controllers/semestre.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Grupo])],
-  providers: [GrupoService],
-  controllers: [GrupoController],
+  imports: [TypeOrmModule.forFeature([Semestre])],
+  providers: [SemestreService],
+  controllers: [SemestreController],
   exports: [],
 })
-export class GrupoModule {}
+export class SemestreModule {}

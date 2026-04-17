@@ -9,6 +9,6 @@ export class Semestre {
   idSemestre!: number;
 
   @IsNotEmpty()
-  @Column({ length: 1, nullable: false })
+  @Column({ unique: true, nullable: false, length: 1 })
   descricaoSemestre!: string;
 }
