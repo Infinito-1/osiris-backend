@@ -10,47 +10,46 @@ import {
   Post,
   Put,
 } from '@nestjs/common';
-import { GrupoService } from '../services/empreendedor.service';
-import { Grupo } from '../entities/empreendedor.entity';
+import { EmpreendedorService } from '../services/empreendedor.service';
+import { Empreendedor } from '../entities/empreendedor.entity';
 
-@Controller('/grupos')
-export class GrupoController {
-  constructor(private readonly grupoService: GrupoService) {}
+@Controller('/empreendedores')
+export class EmpreendedorController {
+  constructor(private readonly empreendedorService: EmpreendedorService) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  findAll(): Promise<Grupo[]> {
-    //importar
-    return this.grupoService.findAll();
+  findAll(): Promise<Empreendedor[]> {
+    return this.empreendedorService.findAll();
   }
 
   @Get('/:id')
   @HttpCode(HttpStatus.OK)
-  findById(@Param('id', ParseIntPipe) id: number): Promise<Grupo[]> {
-    return this.grupoService.findById(id);
+  findById(@Param('id', ParseIntPipe) id: number): Promise<Empreendedor[]> {
+    return this.empreendedorService.findById(id);
   }
 
-  @Get('grupo/:nomeGrupo')
+  @Get('empresa/:nomeEmpresa')
   @HttpCode(HttpStatus.OK)
-  findByName(@Param('nomeGrupo') grupo: string): Promise<Grupo[]> {
-    return this.grupoService.findByName(grupo);
+  findByEmpresa(@Param('nomeEmpresa') empresa: string): Promise<Empreendedor[]> {
+    return this.empreendedorService.findByEmpresa(empresa);
   }
 
   @Post()
-  @HttpCode(HttpStatus.CREATED) //code 201
-  create(@Body() grupo: Grupo): Promise<Grupo> {
-    return this.grupoService.create(grupo);
+  @HttpCode(HttpStatus.CREATED)
+  create(@Body() empreendedor: Empreendedor): Promise<Empreendedor> {
+    return this.empreendedorService.create(empreendedor);
   }
 
   @Put()
   @HttpCode(HttpStatus.OK)
-  update(@Body() grupo: Grupo): Promise<Grupo> {
-    return this.grupoService.update(grupo);
+  update(@Body() empreendedor: Empreendedor): Promise<Empreendedor> {
+    return this.empreendedorService.update(empreendedor);
   }
 
   @Delete('/:id')
-  @HttpCode(HttpStatus.NO_CONTENT) //code 204
+  @HttpCode(HttpStatus.NO_CONTENT)
   delete(@Param('id', ParseIntPipe) id: number) {
-    return this.grupoService.delete(id);
+    return this.empreendedorService.delete(id);
   }
 }
