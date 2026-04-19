@@ -21,7 +21,7 @@ export class TipoDemandaService {
   async findById(id: number): Promise<TipoDemanda[]> {
     return await this.tipoDemandaRepository.find({
       where: {
-        tip_int_id: id,
+        idTipoDemanda: id,
       },
       relations: {},
     });
@@ -30,7 +30,7 @@ export class TipoDemandaService {
   async findByName(nome: string): Promise<TipoDemanda[]> {
     return await this.tipoDemandaRepository.find({
       where: {
-        tip_str_nome: ILike(`%${nome}%`),
+        nome: ILike(`%${nome}%`),
       },
       relations: {},
     });
@@ -41,7 +41,7 @@ export class TipoDemandaService {
   }
 
   async update(tipoDemanda: TipoDemanda): Promise<TipoDemanda> {
-    await this.findById(tipoDemanda.tip_int_id);
+    await this.findById(tipoDemanda.idTipoDemanda);
 
     return await this.tipoDemandaRepository.save(tipoDemanda);
   }
