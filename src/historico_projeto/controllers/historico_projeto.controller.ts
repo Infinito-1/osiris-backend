@@ -31,10 +31,12 @@ export class HistoricoProjetoController {
     return this.historicoProjetoService.findById(id);
   }
 
-  @Get('/desc/:desc')
+  @Get('/descricao/:descricao')
   @HttpCode(HttpStatus.OK)
-  findByDesc(@Param('desc') desc: string): Promise<HistoricoProjeto[]> {
-    return this.historicoProjetoService.findByDesc(desc);
+  findByDescricao(
+    @Param('descricao') descricao: string,
+  ): Promise<HistoricoProjeto[]> {
+    return this.historicoProjetoService.findByDescricao(descricao);
   }
 
   @Post()
