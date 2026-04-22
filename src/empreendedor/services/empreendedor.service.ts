@@ -14,12 +14,12 @@ export class EmpreendedorService {
     return this.empreendedorRepository.find();
   }
 
-  async findById(id: number): Promise<Empreendedor[]> {
-    return this.empreendedorRepository.find({ where: { idEmpreendedor: id } });
+  async findById(id: number): Promise<Empreendedor | null> {
+    return this.empreendedorRepository.findOne({ where: { empIntId: id } });
   }
 
   async findByEmpresa(empresa: string): Promise<Empreendedor[]> {
-    return this.empreendedorRepository.find({ where: { empresa } });
+    return this.empreendedorRepository.find({ where: { empStrEmpresa: empresa } });
   }
 
   async create(empreendedor: Empreendedor): Promise<Empreendedor> {

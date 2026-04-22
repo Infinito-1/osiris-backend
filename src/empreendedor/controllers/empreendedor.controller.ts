@@ -25,7 +25,7 @@ export class EmpreendedorController {
 
   @Get('/:id')
   @HttpCode(HttpStatus.OK)
-  findById(@Param('id', ParseIntPipe) id: number): Promise<Empreendedor[]> {
+  findById(@Param('id', ParseIntPipe) id: number): Promise<Empreendedor | null> {
     return this.empreendedorService.findById(id);
   }
 

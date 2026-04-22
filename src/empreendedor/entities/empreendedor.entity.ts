@@ -1,21 +1,23 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
-import { IsNotEmpty, Matches } from 'class-validator';
+import { IsNotEmpty, IsString, Length } from 'class-validator';
 
-@Entity({ name: 'empreendedores' })
+@Entity({ name: 'empreendedores' }) // 👈 nome da tabela no banco
 export class Empreendedor {
-  @PrimaryGeneratedColumn()
-  idEmpreendedor!: number;
+  @PrimaryGeneratedColumn({ name: 'emp_int_id' })
+  empIntId!: number;
 
   @IsNotEmpty()
-  @Column({ nullable: false })
-  usuarioId!: number; // FK para tabela usuário
+  @Column({ name: 'usu_int_id', nullable: false })
+  usuIntId!: number; // FK para tabela usuário (quando você criar a relação)
 
   @IsNotEmpty()
-  @Column({ length: 100, nullable: false })
-  empresa!: string;
+  @IsString()
+  @Column({ name: 'emp_str_empresa', length: 100, nullable: false })
+  empStrEmpresa!: string;
 
   @IsNotEmpty()
-  @Matches(/^\d{14}$/, { message: 'CNPJ deve conter exatamente 14 dígitos numéricos' })
-  @Column({ length: 14, nullable: false })
-  cnpj!: string;
+  @IsString()
+  @Length(14, 14) // CNPJ sempre tem 14 caracteres
+  @Column({ name: 'emp_cha_cnpj', type: 'char', length: 14, nullable: false })
+  empChaCnpj!: string;
 }
