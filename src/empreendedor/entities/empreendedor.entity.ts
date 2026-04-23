@@ -1,14 +1,14 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { IsNotEmpty, IsString, Length } from 'class-validator';
 
-@Entity({ name: 'empreendedores' }) // 👈 nome da tabela no banco
+@Entity({ name: 'empreendedores' }) 
 export class Empreendedor {
   @PrimaryGeneratedColumn({ name: 'emp_int_id' })
   empIntId!: number;
 
   @IsNotEmpty()
   @Column({ name: 'usu_int_id', nullable: false })
-  usuIntId!: number; // FK para tabela usuário (quando você criar a relação)
+  usuIntId!: number; 
 
   @IsNotEmpty()
   @IsString()
