@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { DevService } from './data/dev.service';
 import { GrupoModule } from './grupo/grupo.module';
+import { CandidaturaModule } from './candidatura/candidatura.module'; // <-- novo
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { GrupoModule } from './grupo/grupo.module';
       imports: [ConfigModule],
     }),
     GrupoModule,
+    CandidaturaModule, // <-- registro do módulo candidatura
   ],
   controllers: [AppController],
   providers: [],
