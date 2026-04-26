@@ -20,12 +20,12 @@ export class SemestreService implements OnApplicationBootstrap {
     if (count > 0) return;
 
     await this.semestreRepository.save([
-      { descricaoSemestre: '1' },
-      { descricaoSemestre: '2' },
-      { descricaoSemestre: '3' },
-      { descricaoSemestre: '4' },
-      { descricaoSemestre: '5' },
-      { descricaoSemestre: '6' },
+      { semStrDescricao: '1' },
+      { semStrDescricao: '2' },
+      { semStrDescricao: '3' },
+      { semStrDescricao: '4' },
+      { semStrDescricao: '5' },
+      { semStrDescricao: '6' },
     ]);
   }
 
@@ -38,7 +38,7 @@ export class SemestreService implements OnApplicationBootstrap {
   async findById(id: number): Promise<Semestre | null> {
     return await this.semestreRepository.findOne({
       where: {
-        idSemestre: id,
+        semIntId: id,
       },
       relations: {},
     });

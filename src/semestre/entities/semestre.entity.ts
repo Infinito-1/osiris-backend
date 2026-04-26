@@ -5,10 +5,15 @@ import { IsNotEmpty } from 'class-validator';
 
 @Entity({ name: 'semestres' })
 export class Semestre {
-  @PrimaryGeneratedColumn()
-  idSemestre!: number;
+  @PrimaryGeneratedColumn({ name: 'sem_int_id' })
+  semIntId!: number;
 
   @IsNotEmpty()
-  @Column({ unique: true, nullable: false, length: 1 })
-  descricaoSemestre!: string;
+  @Column({
+    name: 'sem_str_descricao',
+    unique: true,
+    nullable: false,
+    length: 1,
+  })
+  semStrDescricao!: string;
 }
