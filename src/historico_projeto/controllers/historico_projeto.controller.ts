@@ -4,7 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
-  HttphspStrStatus,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Post,
@@ -20,19 +20,19 @@ export class HistoricoProjetoController {
   ) {}
 
   @Get()
-  @HttpCode(HttphspStrStatus.OK)
+  @HttpCode(HttpStatus.OK)
   findAll(): Promise<HistoricoProjeto[]> {
     return this.historicoProjetoService.findAll();
   }
 
   @Get('/:id')
-  @HttpCode(HttphspStrStatus.OK)
+  @HttpCode(HttpStatus.OK)
   findById(@Param('id', ParseIntPipe) id: number): Promise<HistoricoProjeto[]> {
     return this.historicoProjetoService.findById(id);
   }
 
   @Get('/hspStrDesc/:hspStrDesc')
-  @HttpCode(HttphspStrStatus.OK)
+  @HttpCode(HttpStatus.OK)
   findByhspStrDesc(
     @Param('hspStrDesc') hspStrDesc: string,
   ): Promise<HistoricoProjeto[]> {
@@ -40,19 +40,19 @@ export class HistoricoProjetoController {
   }
 
   @Post()
-  @HttpCode(HttphspStrStatus.CREATED)
+  @HttpCode(HttpStatus.CREATED)
   create(@Body() historico: HistoricoProjeto): Promise<HistoricoProjeto> {
     return this.historicoProjetoService.create(historico);
   }
 
   @Put()
-  @HttpCode(HttphspStrStatus.OK)
+  @HttpCode(HttpStatus.OK)
   update(@Body() historico: HistoricoProjeto): Promise<HistoricoProjeto> {
     return this.historicoProjetoService.update(historico);
   }
 
   @Delete('/:id')
-  @HttpCode(HttphspStrStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.NO_CONTENT)
   delete(@Param('id', ParseIntPipe) id: number) {
     return this.historicoProjetoService.delete(id);
   }
