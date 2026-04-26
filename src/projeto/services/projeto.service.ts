@@ -17,7 +17,7 @@ export class ProjetoService {
   async findById(id: number): Promise<Projeto | null> {
     return this.projetoRepository.findOne({
       where: {
-        pro_int_id: id,
+        proIntId: id,
       },
     });
   }
