@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-// import { ProdService } from './data/prod.service';
 import { AppController } from './app.controller';
 import { DevService } from './data/dev.service';
 import { GrupoModule } from './grupo/grupo.module';
+import { EmpreendedorModule } from './empreendedor/empreendedor.module';
+import { CoordenadorModule } from './coordenador/coordenasdor.module';
 import { CandidaturaModule } from './candidatura/candidatura.module'; // <-- novo
 import { DemandaModule } from './demanda/demanda.module'; // <-- importação do módulo da demanda
 
@@ -16,6 +17,8 @@ import { DemandaModule } from './demanda/demanda.module'; // <-- importação do
       imports: [ConfigModule],
     }),
     GrupoModule,
+    EmpreendedorModule,
+    CoordenadorModule,
     CandidaturaModule, // <-- registro do módulo candidatura
     DemandaModule, // <-- registro do módulo da demanda
   ],
