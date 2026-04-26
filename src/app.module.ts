@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { DevService } from './data/dev.service';
 import { GrupoModule } from './grupo/grupo.module';
 import { CandidaturaModule } from './candidatura/candidatura.module'; // <-- novo
+import { DemandaModule } from './demanda/demanda.module'; // <-- importação do módulo da demanda
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { CandidaturaModule } from './candidatura/candidatura.module'; // <-- nov
     }),
     GrupoModule,
     CandidaturaModule, // <-- registro do módulo candidatura
+    DemandaModule, // <-- registro do módulo da demanda
   ],
   controllers: [AppController],
   providers: [],
