@@ -21,16 +21,16 @@ export class HistoricoProjetoService {
   async findById(id: number): Promise<HistoricoProjeto[]> {
     return await this.historicoProjetoRepository.find({
       where: {
-        idHistoricoProjeto: id,
+        hspIntId: id,
       },
       relations: {},
     });
   }
 
-  async findByDescricao(descricao: string): Promise<HistoricoProjeto[]> {
+  async findByhspStrDesc(hspStrDesc: string): Promise<HistoricoProjeto[]> {
     return await this.historicoProjetoRepository.find({
       where: {
-        descricao: ILike(`%${descricao}%`),
+        hspStrDesc: ILike(`%${hspStrDesc}%`),
       },
       relations: {},
     });
@@ -41,7 +41,7 @@ export class HistoricoProjetoService {
   }
 
   async update(historico: HistoricoProjeto): Promise<HistoricoProjeto> {
-    await this.findById(historico.idHistoricoProjeto);
+    await this.findById(historico.hspIntId);
 
     return await this.historicoProjetoRepository.save(historico);
   }
