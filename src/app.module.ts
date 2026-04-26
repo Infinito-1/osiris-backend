@@ -5,9 +5,14 @@ import { AppController } from './app.controller';
 import { DevService } from './data/dev.service';
 import { GrupoModule } from './grupo/grupo.module';
 import { EmpreendedorModule } from './empreendedor/empreendedor.module';
-import { CoordenadorModule } from './coordenador/coordenasdor.module';
-import { CandidaturaModule } from './candidatura/candidatura.module'; // <-- novo
-import { DemandaModule } from './demanda/demanda.module'; // <-- importação do módulo da demanda
+import { CoordenadorModule } from './coordenador/coordenador.module';
+import { CandidaturaModule } from './candidatura/candidatura.module';
+import { DemandaModule } from './demanda/demanda.module';
+import { HistoricoProjetoModule } from './historico_projeto/historico_projeto.module';
+import { ProjetoModule } from './projeto/projeto.module';
+import { SemestreModule } from './semestre/semestre.module';
+import { TipoDemandaModule } from './tipo_demanda/tipo_demanda.module';
+import { UsuarioModule } from './usuario/usuario.module';
 
 @Module({
   imports: [
@@ -19,8 +24,13 @@ import { DemandaModule } from './demanda/demanda.module'; // <-- importação do
     GrupoModule,
     EmpreendedorModule,
     CoordenadorModule,
-    CandidaturaModule, // <-- registro do módulo candidatura
-    DemandaModule, // <-- registro do módulo da demanda
+    CandidaturaModule,
+    DemandaModule,
+    HistoricoProjetoModule,
+    ProjetoModule,
+    SemestreModule,
+    TipoDemandaModule,
+    UsuarioModule,
   ],
   controllers: [AppController],
   providers: [],

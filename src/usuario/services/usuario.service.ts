@@ -14,7 +14,7 @@ export class UsuarioService {
     return this.usuarioRepository.find();
   }
 
-  async findById(id: number): Promise<Usuario | undefined> {
+  async findById(id: number): Promise<Usuario | null> {
     return this.usuarioRepository.findOne({ where: { usu_int_id: id } });
   }
 
@@ -22,7 +22,7 @@ export class UsuarioService {
     return this.usuarioRepository.save(usuario);
   }
 
-  async update(id: number, usuario: Usuario): Promise<Usuario | undefined> {
+  async update(id: number, usuario: Usuario): Promise<Usuario | null> {
     await this.usuarioRepository.update(id, usuario);
     return this.findById(id);
   }

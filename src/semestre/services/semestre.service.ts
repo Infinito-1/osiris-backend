@@ -1,9 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Semestre } from '../entities/semestre.entity';
-import { ILike, Repository } from 'typeorm';
-
+import { Repository } from 'typeorm';
 
 //atualizar após ativar os relacionamentos
 @Injectable()
@@ -27,7 +25,7 @@ export class SemestreService implements OnApplicationBootstrap {
       { descricaoSemestre: '3' },
       { descricaoSemestre: '4' },
       { descricaoSemestre: '5' },
-      { descricaoSemestre: '6' }
+      { descricaoSemestre: '6' },
     ]);
   }
 

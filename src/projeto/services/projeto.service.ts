@@ -14,15 +14,19 @@ export class ProjetoService {
     return this.projetoRepository.find();
   }
 
-  async findById(id: number): Promise<Projeto | undefined> {
-    return this.projetoRepository.findOne({ where: { pro_int_id: id } });
+  async findById(id: number): Promise<Projeto | null> {
+    return this.projetoRepository.findOne({
+      where: {
+        pro_int_id: id,
+      },
+    });
   }
 
   async create(projeto: Projeto): Promise<Projeto> {
     return this.projetoRepository.save(projeto);
   }
 
-  async update(id: number, projeto: Projeto): Promise<Projeto | undefined> {
+  async update(id: number, projeto: Projeto): Promise<Projeto | null> {
     await this.projetoRepository.update(id, projeto);
     return this.findById(id);
   }
