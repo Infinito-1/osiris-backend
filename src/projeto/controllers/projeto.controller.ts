@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+} from '@nestjs/common';
 import { ProjetoService } from '../services/projeto.service';
 import { Projeto } from '../entities/projeto.entity';
 
@@ -14,7 +25,7 @@ export class ProjetoController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  findById(@Param('id', ParseIntPipe) id: number): Promise<Projeto | undefined> {
+  findById(@Param('id', ParseIntPipe) id: number): Promise<Projeto | null> {
     return this.projetoService.findById(id);
   }
 
@@ -26,7 +37,10 @@ export class ProjetoController {
 
   @Put(':id')
   @HttpCode(HttpStatus.OK)
-  update(@Param('id', ParseIntPipe) id: number, @Body() projeto: Projeto): Promise<Projeto | undefined> {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() projeto: Projeto,
+  ): Promise<Projeto | null> {
     return this.projetoService.update(id, projeto);
   }
 

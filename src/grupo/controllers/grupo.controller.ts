@@ -30,9 +30,9 @@ export class GrupoController {
     return this.grupoService.findById(id);
   }
 
-  @Get('grupo/:nomeGrupo')
+  @Get('grupo/:gruStrNome')
   @HttpCode(HttpStatus.OK)
-  findByName(@Param('nomeGrupo') grupo: string): Promise<Grupo[]> {
+  findByName(@Param('gruStrNome') grupo: string): Promise<Grupo[]> {
     return this.grupoService.findByName(grupo);
   }
 

@@ -11,8 +11,7 @@ export class DevService implements TypeOrmOptionsFactory {
       username: 'postgres',
       password: 'root',
       database: 'db_osiris',
-
-      autoLoadEntities: true, 
+      autoLoadEntities: true,
       synchronize: true,
     };
   }

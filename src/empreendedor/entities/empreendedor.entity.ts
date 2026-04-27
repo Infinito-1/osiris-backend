@@ -1,14 +1,23 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { IsNotEmpty, IsString, Length } from 'class-validator';
+import { Demanda } from '../../demanda/entities/demanda.entity';
+import { Usuario } from '../../usuario/entities/usuario.entity';
 
-@Entity({ name: 'empreendedores' }) 
+@Entity({ name: 'empreendedores' })
 export class Empreendedor {
   @PrimaryGeneratedColumn({ name: 'emp_int_id' })
   empIntId!: number;
 
-  @IsNotEmpty()
-  @Column({ name: 'usu_int_id', nullable: false })
-  usuIntId!: number; 
+  @OneToOne(() => Usuario)
+  @JoinColumn({ name: 'usu_int_id' })
+  usuario!: Usuario;
 
   @IsNotEmpty()
   @IsString()
@@ -20,4 +29,7 @@ export class Empreendedor {
   @Length(14, 14) // CNPJ sempre tem 14 caracteres
   @Column({ name: 'emp_cha_cnpj', type: 'char', length: 14, nullable: false })
   empChaCnpj!: string;
+
+  @OneToMany(() => Demanda, (demanda) => demanda.empreendedor)
+  demanda!: Demanda[];
 }

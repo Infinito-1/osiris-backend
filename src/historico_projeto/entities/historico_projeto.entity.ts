@@ -1,28 +1,36 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { IsNotEmpty } from 'class-validator';
+import { Projeto } from '../../projeto/entities/projeto.entity';
 
 @Entity({ name: 'historico_status_projeto' })
 export class HistoricoProjeto {
-  @PrimaryGeneratedColumn()
-  idHistoricoProjeto!: number;
+  @PrimaryGeneratedColumn({ name: 'hsp_int_id' })
+  hspIntId!: number;
 
   @IsNotEmpty()
-  @Column({ length: 200, nullable: false })
-  descricao!: string;
+  @Column({ name: 'hsp_str_desc', length: 200, nullable: false })
+  hspStrDesc!: string;
 
   @IsNotEmpty()
-  @Column({ length: 200, nullable: false })
-  linkProjeto!: string;
+  @Column({ name: 'hsp_str_link_projeto', length: 200, nullable: false })
+  hspStrLinkProjeto!: string;
 
   @IsNotEmpty()
-  @Column({ length: 100, nullable: false })
-  status!: string;
+  @Column({ name: 'hsp_str_status', length: 100, nullable: false })
+  hspStrStatus!: string;
 
-  @IsNotEmpty()
-  @Column({ type: 'date', nullable: false })
-  data!: Date;
+  @UpdateDateColumn()
+  @Column({ name: 'hsp_date_data', type: 'date', nullable: false })
+  hspDateData!: Date;
 
-  @IsNotEmpty()
-  @Column({ nullable: false })
-  idProjeto!: number;
+  @OneToOne(() => Projeto)
+  @JoinColumn({ name: 'pro_int_id' })
+  projeto!: Projeto;
 }

@@ -31,12 +31,12 @@ export class HistoricoProjetoController {
     return this.historicoProjetoService.findById(id);
   }
 
-  @Get('/descricao/:descricao')
+  @Get('/hspStrDesc/:hspStrDesc')
   @HttpCode(HttpStatus.OK)
-  findByDescricao(
-    @Param('descricao') descricao: string,
+  findByhspStrDesc(
+    @Param('hspStrDesc') hspStrDesc: string,
   ): Promise<HistoricoProjeto[]> {
-    return this.historicoProjetoService.findByDescricao(descricao);
+    return this.historicoProjetoService.findByhspStrDesc(hspStrDesc);
   }
 
   @Post()

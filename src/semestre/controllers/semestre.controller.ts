@@ -1,14 +1,10 @@
 import {
-  Body,
   Controller,
-  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
   ParseIntPipe,
-  Post,
-  Put,
 } from '@nestjs/common';
 import { SemestreService } from '../services/semestre.service';
 import { Semestre } from '../entities/semestre.entity';
@@ -29,5 +25,4 @@ export class SemestreController {
   findById(@Param('id', ParseIntPipe) id: number): Promise<Semestre | null> {
     return this.semestreService.findById(id);
   }
-
 }

@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+} from '@nestjs/common';
 import { UsuarioService } from '../services/usuario.service';
 import { Usuario } from '../entities/usuario.entity';
 
@@ -14,7 +25,7 @@ export class UsuarioController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  findById(@Param('id', ParseIntPipe) id: number): Promise<Usuario | undefined> {
+  findById(@Param('id', ParseIntPipe) id: number): Promise<Usuario | null> {
     return this.usuarioService.findById(id);
   }
 
@@ -26,7 +37,10 @@ export class UsuarioController {
 
   @Put(':id')
   @HttpCode(HttpStatus.OK)
-  update(@Param('id', ParseIntPipe) id: number, @Body() usuario: Usuario): Promise<Usuario | undefined> {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() usuario: Usuario,
+  ): Promise<Usuario | null> {
     return this.usuarioService.update(id, usuario);
   }
 

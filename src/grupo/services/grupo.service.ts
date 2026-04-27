@@ -22,7 +22,7 @@ export class GrupoService {
   async findById(id: number): Promise<Grupo[]> {
     return await this.grupoRepository.find({
       where: {
-        idGrupo: id,
+        gruIntId: id,
       },
       relations: {},
     });
@@ -31,7 +31,7 @@ export class GrupoService {
   async findByName(nome: string): Promise<Grupo[]> {
     return await this.grupoRepository.find({
       where: {
-        nomeGrupo: ILike(`%${nome}%`),
+        gruStrNome: ILike(`%${nome}%`),
       },
       relations: {},
     });
@@ -42,7 +42,7 @@ export class GrupoService {
   }
 
   async update(grupo: Grupo): Promise<Grupo> {
-    await this.findById(grupo.idGrupo);
+    await this.findById(grupo.gruIntId);
 
     return await this.grupoRepository.save(grupo);
   }
