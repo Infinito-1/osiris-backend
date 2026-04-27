@@ -1,18 +1,24 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  JoinTable,
+  ManyToMany,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { IsNotEmpty, IsBoolean } from 'class-validator';
+import { Empreendedor } from '../../empreendedor/entities/empreendedor.entity';
+import { Coordenador } from '../../coordenador/entities/coordenador.entity';
+import { Candidatura } from '../../candidatura/entities/candidatura.entity';
+import { Semestre } from '../../semestre/entities/semestre.entity';
+import { TipoDemanda } from '../../tipo_demanda/entities/tipo_demanda.entity';
 
 @Entity({ name: 'demandas' })
 export class Demanda {
   @PrimaryGeneratedColumn({ name: 'dem_int_id' })
   demIntId!: number;
-
-  @IsNotEmpty()
-  @Column({ name: 'emp_int_id', nullable: false })
-  empIntId!: number; // FK para tabela empreendedor
-
-  @IsNotEmpty()
-  @Column({ name: 'coo_int_id', nullable: false })
-  cooIntId!: number; // FK para tabela coordenador
 
   @IsNotEmpty()
   @Column({ name: 'dem_str_nome', length: 100, nullable: false })
@@ -22,8 +28,9 @@ export class Demanda {
   @Column({ name: 'dem_str_descricao', length: 255, nullable: false })
   demStrDescricao!: string;
 
-  @Column({ name: 'dem_int_semestre_recomendado', nullable: true })
-  demIntSemestreRecomendado!: number;
+  @ManyToOne(() => Semestre, (semestre) => semestre.demanda)
+  @JoinColumn({ name: 'dem_int_semestre_recomendado' })
+  semestre!: Semestre;
 
   @IsBoolean()
   @Column({ name: 'dem_bool_aceita_mudanca_tipo', default: false })
@@ -32,4 +39,29 @@ export class Demanda {
   @IsBoolean()
   @Column({ name: 'dem_bool_aceitacao', default: false })
   demBoolAceitacao!: boolean;
+
+  @ManyToMany(() => TipoDemanda, (tipo) => tipo.demanda)
+  @JoinTable({
+    name: 'demanda_tipo_demanda', // tabela associativa
+    joinColumn: {
+      name: 'dem_int_id',
+      referencedColumnName: 'demIntId',
+    },
+    inverseJoinColumn: {
+      name: 'tip_int_id',
+      referencedColumnName: 'tipIntId',
+    },
+  })
+  tipo!: TipoDemanda[];
+
+  @ManyToOne(() => Empreendedor, (empreendedor) => empreendedor.demanda)
+  @JoinColumn({ name: 'emp_int_id' })
+  empreendedor!: Empreendedor;
+
+  @ManyToOne(() => Coordenador, (coordenador) => coordenador.demanda)
+  @JoinColumn({ name: 'coo_int_id' })
+  coordenador!: Coordenador;
+
+  @OneToMany(() => Candidatura, (candidatura) => candidatura.demanda)
+  candidatura!: Candidatura[];
 }

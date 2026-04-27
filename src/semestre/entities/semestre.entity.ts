@@ -1,5 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { IsNotEmpty } from 'class-validator';
+import { Grupo } from '../../grupo/entities/grupo.entity';
+import { Demanda } from '../../demanda/entities/demanda.entity';
 
 //adicionar relacionamentos com tab grupo, projetos e candidaturas
 
@@ -16,4 +18,10 @@ export class Semestre {
     length: 1,
   })
   semStrDescricao!: string;
+
+  @OneToMany(() => Grupo, (grupo) => grupo.semestre)
+  grupo!: Grupo[];
+
+  @OneToMany(() => Demanda, (demanda) => demanda.semestre)
+  demanda!: Demanda[];
 }

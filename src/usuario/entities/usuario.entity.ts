@@ -26,7 +26,11 @@ export class Usuario {
   })
   usuStrTelefone!: string;
 
-  @Column({ name: 'usu_str_tipo', type: 'varchar', length: 50 })
+  @Column({
+    name: 'usu_str_tipo',
+    type: 'enum',
+    enum: ['Empreendedor', 'Coordenador', 'Grupo'],
+  })
   @IsNotEmpty()
-  usuStrTipo!: string;
+  usuStrTipo!: 'Empreendedor' | 'Coordenador' | 'Grupo';
 }

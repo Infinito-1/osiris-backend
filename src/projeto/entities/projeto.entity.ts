@@ -1,5 +1,12 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { IsNotEmpty } from 'class-validator';
+import { Candidatura } from '../../candidatura/entities/candidatura.entity';
 
 @Entity({ name: 'projeto' })
 export class Projeto {
@@ -14,7 +21,7 @@ export class Projeto {
   @IsNotEmpty()
   proDateInicio!: Date;
 
-  // @Column({ name: 'can_int_id', type: 'int' })
-  // @IsNotEmpty()
-  // can_int_id: number; // Foreign Key para Candidatura
+  @OneToOne(() => Candidatura)
+  @JoinColumn({ name: 'can_int_id' })
+  candidatura!: Candidatura;
 }

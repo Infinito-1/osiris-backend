@@ -1,5 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { IsNotEmpty } from 'class-validator';
+import { Projeto } from '../../projeto/entities/projeto.entity';
 
 @Entity({ name: 'historico_hspStrStatus_projeto' })
 export class HistoricoProjeto {
@@ -15,14 +23,14 @@ export class HistoricoProjeto {
   hspStrLinkProjeto!: string;
 
   @IsNotEmpty()
-  @Column({ name: 'hsp_str_hspStrStatus', length: 100, nullable: false })
+  @Column({ name: 'hsp_str_status', length: 100, nullable: false })
   hspStrStatus!: string;
 
-  @IsNotEmpty()
-  @Column({ name: 'hsp_date_hspDateData', type: 'date', nullable: false })
+  @UpdateDateColumn()
+  @Column({ name: 'hsp_date_data', type: 'date', nullable: false })
   hspDateData!: Date;
 
-  // @IsNotEmpty()
-  // @Column({ name: 'hsp_str', nullable: false })
-  // idProjeto!: number;
+  @OneToOne(() => Projeto)
+  @JoinColumn({ name: 'pro_int_id' })
+  projeto!: Projeto;
 }
