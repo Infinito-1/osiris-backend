@@ -9,7 +9,7 @@ import {
 import { IsNotEmpty } from 'class-validator';
 import { Projeto } from '../../projeto/entities/projeto.entity';
 
-@Entity({ name: 'historico_hspStrStatus_projeto' })
+@Entity({ name: 'historico_status_projeto' })
 export class HistoricoProjeto {
   @PrimaryGeneratedColumn({ name: 'hsp_int_id' })
   hspIntId!: number;
