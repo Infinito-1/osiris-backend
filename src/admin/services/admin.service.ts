@@ -1,8 +1,8 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Usuario } from '../usuario/entities/usuario.entity';
-import { Candidatura } from '../candidatura/entities/candidatura.entity';
+import { Usuario } from '../../usuario/entities/usuario.entity';
+import { Candidatura } from '../../candidatura/entities/candidatura.entity';
 
 @Injectable()
 export class AdminService {
@@ -13,20 +13,12 @@ export class AdminService {
     private readonly candidaturaRepository: Repository<Candidatura>,
   ) {}
 
-  // ===== GESTÃO DE CANDIDATURAS =====
-
-  /**
-   * Listar todas as candidaturas com detalhes relacionados
-   */
   async getAllCandidaturas(): Promise<Candidatura[]> {
     return this.candidaturaRepository.find({
       relations: ['coordenador', 'demanda', 'grupo'],
     });
   }
 
-  /**
-   * Obter candidatura por ID com detalhes relacionados
-   */
   async getCandidaturaById(id: number): Promise<Candidatura | null> {
     return this.candidaturaRepository.findOne({
       where: { canIntId: id },
@@ -34,9 +26,6 @@ export class AdminService {
     });
   }
 
-  /**
-   * Desativar/Ativar candidatura alterando o status
-   */
   async toggleCandidaturaStatus(
     id: number,
     novoStatus: string,
@@ -51,23 +40,14 @@ export class AdminService {
     return this.candidaturaRepository.save(candidatura);
   }
 
-  /**
-   * Desativar candidatura (status = 'Desativada')
-   */
   async desativarCandidatura(id: number): Promise<Candidatura> {
     return this.toggleCandidaturaStatus(id, 'Desativada');
   }
 
-  /**
-   * Ativar candidatura (status = 'Ativa')
-   */
   async ativarCandidatura(id: number): Promise<Candidatura> {
     return this.toggleCandidaturaStatus(id, 'Ativa');
   }
 
-  /**
-   * Listar candidaturas por status
-   */
   async getCandidaturasByStatus(status: string): Promise<Candidatura[]> {
     return this.candidaturaRepository.find({
       where: { canStrStatus: status },
@@ -75,9 +55,6 @@ export class AdminService {
     });
   }
 
-  /**
-   * Listar candidaturas por grupo
-   */
   async getCandidaturasByGrupo(grupoId: number): Promise<Candidatura[]> {
     return this.candidaturaRepository.find({
       where: { grupo: { gruIntId: grupoId } },
@@ -85,34 +62,20 @@ export class AdminService {
     });
   }
 
-  // ===== GESTÃO DE UTILIZADORES =====
-
-  /**
-   * Listar todos os utilizadores
-   */
   async getAllUsuarios(): Promise<Usuario[]> {
     return this.usuarioRepository.find();
   }
 
-  /**
-   * Obter utilizador por ID
-   */
   async getUsuarioById(id: number): Promise<Usuario | null> {
     return this.usuarioRepository.findOne({ where: { usuIntId: id } });
   }
 
-  /**
-   * Listar utilizadores por tipo
-   */
   async getUsuariosByTipo(
     tipo: 'Empreendedor' | 'Coordenador' | 'Grupo' | 'Admin',
   ): Promise<Usuario[]> {
     return this.usuarioRepository.find({ where: { usuStrTipo: tipo } });
   }
 
-  /**
-   * Atualizar perfil de utilizador
-   */
   async updateUsuario(
     id: number,
     dadosAtualizacao: Partial<Usuario>,
@@ -123,7 +86,6 @@ export class AdminService {
       throw new BadRequestException('Utilizador não encontrado');
     }
 
-    // Não permitir alteração de tipo de utilizador via admin (segurança)
     if (dadosAtualizacao.usuStrTipo) {
       delete dadosAtualizacao.usuStrTipo;
     }
@@ -132,9 +94,6 @@ export class AdminService {
     return this.getUsuarioById(id);
   }
 
-  /**
-   * Desativar utilizador (delete lógico - pode ser implementado com flag)
-   */
   async desativarUsuario(id: number): Promise<void> {
     const usuario = await this.getUsuarioById(id);
 
@@ -152,9 +111,6 @@ export class AdminService {
     await this.usuarioRepository.delete(id);
   }
 
-  /**
-   * Promover utilizador para Admin
-   */
   async promoverParaAdmin(id: number): Promise<Usuario | null> {
     const usuario = await this.getUsuarioById(id);
 
@@ -166,9 +122,6 @@ export class AdminService {
     return this.usuarioRepository.save(usuario);
   }
 
-  /**
-   * Remover privilégios de Admin
-   */
   async removerAdminPrivilegios(id: number): Promise<Usuario | null> {
     const usuario = await this.getUsuarioById(id);
 
@@ -180,7 +133,6 @@ export class AdminService {
       throw new BadRequestException('Utilizador não é administrador');
     }
 
-    // Não permitir remover o último admin (opcional - depende da política)
     const admins = await this.getUsuariosByTipo('Admin');
     if (admins.length === 1) {
       throw new BadRequestException(
@@ -188,13 +140,10 @@ export class AdminService {
       );
     }
 
-    usuario.usuStrTipo = 'Coordenador'; // Converter para Coordenador por padrão
+    usuario.usuStrTipo = 'Coordenador';
     return this.usuarioRepository.save(usuario);
   }
 
-  /**
-   * Obter estatísticas gerais
-   */
   async getEstatisticas() {
     const totalUsuarios = await this.usuarioRepository.count();
     const totalCandidaturas = await this.candidaturaRepository.count();

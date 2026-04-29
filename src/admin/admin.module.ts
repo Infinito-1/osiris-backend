@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AdminService } from './admin.service';
-import { AdminController } from './admin.controller';
+import { AdminService } from './services/admin.service';
+import { AdminController } from './controllers/admin.controller';
 import { Usuario } from '../usuario/entities/usuario.entity';
 import { Candidatura } from '../candidatura/entities/candidatura.entity';
 

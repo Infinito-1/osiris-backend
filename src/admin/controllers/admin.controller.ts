@@ -11,7 +11,7 @@ import {
   Put,
 } from '@nestjs/common';
 import { AdminService } from '../services/admin.service';
-import { Usuario } from '../usuario/entities/usuario.entity';
+import { Usuario } from '../../usuario/entities/usuario.entity';
 
 @Controller('admin')
 export class AdminController {
