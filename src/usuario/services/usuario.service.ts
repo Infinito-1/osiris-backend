@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Usuario } from '../entities/usuario.entity';
+import { CreateUsuarioDto } from '../dto/create-usuario.dto';
+import { UpdateUsuarioDto } from '../dto/update-usuario.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsuarioService {
@@ -19,17 +22,32 @@ export class UsuarioService {
   }
 
   async findByEmail(email: string): Promise<Usuario | null> {
-    // Busca pelo campo correto da entidade
     return this.usuarioRepository.findOne({ where: { usuStrEmail: email } });
   }
 
-  async create(usuario: Usuario): Promise<Usuario> {
-    return this.usuarioRepository.save(usuario);
+  async create(dto: CreateUsuarioDto): Promise<Usuario> {
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await bcrypt.hash(dto.usuStrSenha, salt);
+
+    const novoUsuario = this.usuarioRepository.create({
+      ...dto,
+      usuStrSenha: hashedPassword,
+    });
+
+    return this.usuarioRepository.save(novoUsuario);
   }
 
-  async update(id: number, usuario: Usuario): Promise<Usuario | null> {
-    await this.usuarioRepository.update(id, usuario);
-    return this.findById(id);
+  async update(id: number, dto: UpdateUsuarioDto): Promise<Usuario | null> {
+    const usuario = await this.findById(id);
+    if (!usuario) return null;
+
+    if (dto.usuStrSenha) {
+      const salt = await bcrypt.genSalt();
+      dto.usuStrSenha = await bcrypt.hash(dto.usuStrSenha, salt);
+    }
+
+    Object.assign(usuario, dto);
+    return this.usuarioRepository.save(usuario);
   }
 
   async delete(id: number): Promise<void> {

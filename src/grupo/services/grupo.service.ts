@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Grupo } from '../entities/grupo.entity';
-import { ILike, Repository } from 'typeorm';
-import { DeleteResult } from 'typeorm/browser';
+import { Repository, ILike } from 'typeorm';
+import { CreateGrupoDto } from '../dto/create-grupo.dto';
+import { UpdateGrupoDto } from '../dto/update-grupo.dto';
 
-//atualizar após ativar os relacionamentos
 @Injectable()
 export class GrupoService {
   constructor(
@@ -14,42 +13,41 @@ export class GrupoService {
   ) {}
 
   async findAll(): Promise<Grupo[]> {
-    return await this.grupoRepository.find({
-      relations: {},
-    });
+    return this.grupoRepository.find({ relations: ['usuario'] });
   }
 
-  async findById(id: number): Promise<Grupo[]> {
-    return await this.grupoRepository.find({
-      where: {
-        gruIntId: id,
-      },
-      relations: {},
-    });
+  async findById(id: number): Promise<Grupo | null> {
+    return this.grupoRepository.findOne({ where: { gruIntId: id }, relations: ['usuario'] });
   }
 
   async findByName(nome: string): Promise<Grupo[]> {
-    return await this.grupoRepository.find({
-      where: {
-        gruStrNome: ILike(`%${nome}%`),
-      },
-      relations: {},
+    return this.grupoRepository.find({
+      where: { gruStrNome: ILike(`%${nome}%`) },
+      relations: ['usuario'],
     });
   }
 
-  async create(grupo: Grupo): Promise<Grupo> {
-    return await this.grupoRepository.save(grupo);
+  async create(dto: CreateGrupoDto): Promise<Grupo> {
+    const grupo = this.grupoRepository.create({
+      ...dto,
+      usuario: { usuIntId: dto.usuIntId } as any,
+    });
+    return this.grupoRepository.save(grupo);
   }
 
-  async update(grupo: Grupo): Promise<Grupo> {
-    await this.findById(grupo.gruIntId);
+  async update(id: number, dto: UpdateGrupoDto): Promise<Grupo | null> {
+    const grupo = await this.findById(id);
+    if (!grupo) return null;
 
-    return await this.grupoRepository.save(grupo);
+    Object.assign(grupo, dto);
+    if (dto.usuIntId) {
+      grupo.usuario = { usuIntId: dto.usuIntId } as any;
+    }
+
+    return this.grupoRepository.save(grupo);
   }
 
-  async delete(id: number): Promise<DeleteResult> {
-    await this.findById(id);
-
-    return await this.grupoRepository.delete(id);
+  async delete(id: number) {
+    return this.grupoRepository.delete(id);
   }
 }
