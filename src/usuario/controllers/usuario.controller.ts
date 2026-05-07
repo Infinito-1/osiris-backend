@@ -9,9 +9,12 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { UsuarioService } from '../services/usuario.service';
 import { Usuario } from '../entities/usuario.entity';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 
 @Controller('usuarios')
 export class UsuarioController {
@@ -48,5 +51,17 @@ export class UsuarioController {
   @HttpCode(HttpStatus.NO_CONTENT)
   delete(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.usuarioService.delete(id);
+  }
+
+  // 🔒 Rota protegida com JWT
+  @UseGuards(JwtAuthGuard)
+  @Get('perfil')
+  @HttpCode(HttpStatus.OK)
+  getPerfil(@Request() req) {
+    // req.user vem do JwtStrategy.validate()
+    return {
+      message: 'Usuário autenticado com sucesso!',
+      usuario: req.user,
+    };
   }
 }

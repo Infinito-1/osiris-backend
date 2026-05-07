@@ -18,6 +18,11 @@ export class UsuarioService {
     return this.usuarioRepository.findOne({ where: { usuIntId: id } });
   }
 
+  async findByEmail(email: string): Promise<Usuario | null> {
+    // Busca pelo campo correto da entidade
+    return this.usuarioRepository.findOne({ where: { usuStrEmail: email } });
+  }
+
   async create(usuario: Usuario): Promise<Usuario> {
     return this.usuarioRepository.save(usuario);
   }
