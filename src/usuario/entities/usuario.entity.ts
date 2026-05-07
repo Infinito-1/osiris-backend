@@ -29,8 +29,8 @@ export class Usuario {
   @Column({
     name: 'usu_str_tipo',
     type: 'enum',
-    enum: ['Empreendedor', 'Coordenador', 'Grupo'],
+    enum: ['Empreendedor', 'Coordenador', 'Grupo', 'Admin'],
   })
   @IsNotEmpty()
-  usuStrTipo!: 'Empreendedor' | 'Coordenador' | 'Grupo';
+  usuStrTipo!: 'Empreendedor' | 'Coordenador' | 'Grupo' | 'Admin';
 }

@@ -13,6 +13,7 @@ import { ProjetoModule } from './projeto/projeto.module';
 import { SemestreModule } from './semestre/semestre.module';
 import { TipoDemandaModule } from './tipo_demanda/tipo_demanda.module';
 import { UsuarioModule } from './usuario/usuario.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { UsuarioModule } from './usuario/usuario.module';
     SemestreModule,
     TipoDemandaModule,
     UsuarioModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [],
