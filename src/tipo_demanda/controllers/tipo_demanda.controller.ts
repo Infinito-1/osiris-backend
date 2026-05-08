@@ -26,7 +26,7 @@ export class TipoDemandaController {
 
   @Get('/:id')
   @HttpCode(HttpStatus.OK)
-  findById(@Param('id', ParseIntPipe) id: number): Promise<TipoDemanda[]> {
+  findById(@Param('id', ParseIntPipe) id: number): Promise<TipoDemanda | null> {
     return this.tipoDemandaService.findById(id);
   }
 

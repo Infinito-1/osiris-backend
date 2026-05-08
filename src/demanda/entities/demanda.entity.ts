@@ -40,7 +40,7 @@ export class Demanda {
   @Column({ name: 'dem_bool_aceitacao', default: false })
   demBoolAceitacao!: boolean;
 
-  @ManyToMany(() => TipoDemanda, (tipo) => tipo.demanda)
+  @ManyToMany(() => TipoDemanda, (tipo) => tipo.demandas)
   @JoinTable({
     name: 'demanda_tipo_demanda', // tabela associativa
     joinColumn: {

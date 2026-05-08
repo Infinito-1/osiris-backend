@@ -8,9 +8,14 @@ export class TipoDemanda {
   tipIntId!: number;
 
   @IsNotEmpty()
-  @Column({ name: 'tip_str_tipStrNome', length: 100, nullable: false })
+  @Column({
+    name: 'tip_str_nome',
+    length: 100,
+    nullable: false,
+    unique: true,
+  })
   tipStrNome!: string;
 
   @ManyToMany(() => Demanda, (demanda) => demanda.tipo)
-  demanda!: Demanda[];
+  demandas!: Demanda[];
 }

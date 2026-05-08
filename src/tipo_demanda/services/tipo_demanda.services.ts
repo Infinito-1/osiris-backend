@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TipoDemanda } from '../entities/tipo_demanda.entity';
 import { ILike, In, Repository } from 'typeorm';
 // import { DeleteResult } from 'typeorm/browser';
 
 @Injectable()
-export class TipoDemandaService {
+export class TipoDemandaService implements OnApplicationBootstrap {
   constructor(
     @InjectRepository(TipoDemanda)
     private tipoDemandaRepository: Repository<TipoDemanda>,
   ) {}
 
-    async onApplicationBootstrap() {
+  async onApplicationBootstrap() {
     await this.seed();
   }
 
@@ -32,13 +32,10 @@ export class TipoDemandaService {
     return await this.tipoDemandaRepository.find();
   }
 
-  async findById(id: number): Promise<TipoDemanda[]> {
-    return await this.tipoDemandaRepository.find({
+  async findById(id: number): Promise<TipoDemanda | null> {
+    return await this.tipoDemandaRepository.findOne({
       where: {
         tipIntId: id,
-      },
-      relations: {
-        demanda: true,
       },
     });
   }
@@ -49,7 +46,7 @@ export class TipoDemandaService {
         tipStrNome: ILike(`%${tipStrNome}%`),
       },
       relations: {
-        demanda: true,
+        demandas: true,
       },
     });
   }
@@ -60,7 +57,7 @@ export class TipoDemandaService {
         tipIntId: In(ids),
       },
       relations: {
-        demanda: true,
+        demandas: true,
       },
     });
   }
