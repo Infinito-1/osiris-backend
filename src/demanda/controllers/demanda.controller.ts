@@ -10,9 +10,13 @@ import {
   Post,
   Put,
   Query,
+  UseGuards
 } from '@nestjs/common';
 import { DemandaService } from '../services/demanda.service';
 import { Demanda } from '../entities/demanda.entity';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { CreateDemandaDto } from '../dto/create-demanda.dto';
+import { UpdateDemandaDto } from '../dto/update-demanda.dto';
 
 @Controller('/demandas')
 export class DemandaController {
@@ -44,24 +48,33 @@ export class DemandaController {
     return this.demandaService.findByNome(nome);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() demanda: Demanda): Promise<Demanda> {
-    return this.demandaService.create(demanda);
+  create(@Body() dto: CreateDemandaDto): Promise<Demanda> {
+    return this.demandaService.create(dto);
   }
 
+
+  @UseGuards(JwtAuthGuard)
   @Put('/desativar/:id')
   @HttpCode(HttpStatus.OK)
   desativar(@Param('id', ParseIntPipe) id: number): Promise<Demanda> {
     return this.demandaService.desativar(id);
   }
 
-  @Put()
+ 
+  @UseGuards(JwtAuthGuard)
+  @Put('/:id')
   @HttpCode(HttpStatus.OK)
-  update(@Body() demanda: Demanda): Promise<Demanda> {
-    return this.demandaService.update(demanda);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateDemandaDto,
+  ): Promise<Demanda | null> {
+    return this.demandaService.update(id, dto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete('/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   delete(@Param('id', ParseIntPipe) id: number) {
