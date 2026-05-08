@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { HistoricoProjeto } from '../entities/historico_projeto.entity';
-import { ILike, Repository } from 'typeorm';
-import { DeleteResult } from 'typeorm/browser';
+import { CreateHistoricoProjetoDto } from '../dto/create-historico-projeto.dto';
+import { UpdateHistoricoProjetoDto } from '../dto/update-historico-projeto.dto';
 
 @Injectable()
 export class HistoricoProjetoService {
@@ -13,42 +13,42 @@ export class HistoricoProjetoService {
   ) {}
 
   async findAll(): Promise<HistoricoProjeto[]> {
-    return await this.historicoProjetoRepository.find({
-      relations: {},
-    });
+    return this.historicoProjetoRepository.find({ relations: ['projeto'] });
   }
 
-  async findById(id: number): Promise<HistoricoProjeto[]> {
-    return await this.historicoProjetoRepository.find({
-      where: {
-        hspIntId: id,
-      },
-      relations: {},
+  async findById(id: number): Promise<HistoricoProjeto | null> {
+    return this.historicoProjetoRepository.findOne({
+      where: { hspIntId: id },
+      relations: ['projeto'],
     });
   }
 
   async findByhspStrDesc(hspStrDesc: string): Promise<HistoricoProjeto[]> {
-    return await this.historicoProjetoRepository.find({
-      where: {
-        hspStrDesc: ILike(`%${hspStrDesc}%`),
-      },
-      relations: {},
+    return this.historicoProjetoRepository.find({
+      where: { hspStrDesc },
+      relations: ['projeto'],
     });
   }
 
-  async create(historico: HistoricoProjeto): Promise<HistoricoProjeto> {
-    return await this.historicoProjetoRepository.save(historico);
+  async create(dto: CreateHistoricoProjetoDto): Promise<HistoricoProjeto> {
+    const historico = this.historicoProjetoRepository.create({
+      ...dto,
+      projeto: { proIntId: dto.proIntId } as any,
+    });
+    return this.historicoProjetoRepository.save(historico);
   }
 
-  async update(historico: HistoricoProjeto): Promise<HistoricoProjeto> {
-    await this.findById(historico.hspIntId);
+  async update(id: number, dto: UpdateHistoricoProjetoDto): Promise<HistoricoProjeto | null> {
+    const historico = await this.findById(id);
+    if (!historico) return null;
 
-    return await this.historicoProjetoRepository.save(historico);
+    Object.assign(historico, dto);
+    if (dto.proIntId) historico.projeto = { proIntId: dto.proIntId } as any;
+
+    return this.historicoProjetoRepository.save(historico);
   }
 
-  async delete(id: number): Promise<DeleteResult> {
-    await this.findById(id);
-
-    return await this.historicoProjetoRepository.delete(id);
+  async delete(id: number) {
+    return this.historicoProjetoRepository.delete(id);
   }
 }

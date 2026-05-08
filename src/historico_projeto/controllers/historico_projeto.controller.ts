@@ -1,23 +1,16 @@
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  ParseIntPipe,
-  Post,
-  Put,
+  Body, Controller, Delete, Get, HttpCode, HttpStatus,
+  Param, ParseIntPipe, Post, Put, UseGuards
 } from '@nestjs/common';
 import { HistoricoProjetoService } from '../services/historico_projeto.service';
 import { HistoricoProjeto } from '../entities/historico_projeto.entity';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { CreateHistoricoProjetoDto } from '../dto/create-historico-projeto.dto';
+import { UpdateHistoricoProjetoDto } from '../dto/update-historico-projeto.dto';
 
 @Controller('/historicos-projeto')
 export class HistoricoProjetoController {
-  constructor(
-    private readonly historicoProjetoService: HistoricoProjetoService,
-  ) {}
+  constructor(private readonly historicoProjetoService: HistoricoProjetoService) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -27,30 +20,34 @@ export class HistoricoProjetoController {
 
   @Get('/:id')
   @HttpCode(HttpStatus.OK)
-  findById(@Param('id', ParseIntPipe) id: number): Promise<HistoricoProjeto[]> {
+  findById(@Param('id', ParseIntPipe) id: number): Promise<HistoricoProjeto | null> {
     return this.historicoProjetoService.findById(id);
   }
 
-  @Get('/hspStrDesc/:hspStrDesc')
+  @Get('/descricao/:desc')
   @HttpCode(HttpStatus.OK)
-  findByhspStrDesc(
-    @Param('hspStrDesc') hspStrDesc: string,
-  ): Promise<HistoricoProjeto[]> {
-    return this.historicoProjetoService.findByhspStrDesc(hspStrDesc);
+  findByhspStrDesc(@Param('desc') desc: string): Promise<HistoricoProjeto[]> {
+    return this.historicoProjetoService.findByhspStrDesc(desc);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() historico: HistoricoProjeto): Promise<HistoricoProjeto> {
-    return this.historicoProjetoService.create(historico);
+  create(@Body() dto: CreateHistoricoProjetoDto): Promise<HistoricoProjeto> {
+    return this.historicoProjetoService.create(dto);
   }
 
-  @Put()
+  @UseGuards(JwtAuthGuard)
+  @Put('/:id')
   @HttpCode(HttpStatus.OK)
-  update(@Body() historico: HistoricoProjeto): Promise<HistoricoProjeto> {
-    return this.historicoProjetoService.update(historico);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateHistoricoProjetoDto,
+  ): Promise<HistoricoProjeto | null> {
+    return this.historicoProjetoService.update(id, dto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete('/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   delete(@Param('id', ParseIntPipe) id: number) {

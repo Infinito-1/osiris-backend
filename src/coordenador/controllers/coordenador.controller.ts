@@ -9,9 +9,14 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { CoordenadorService } from '../services/coordenador.service';
 import { Coordenador } from '../entities/coordenador.entity';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { CreateCoordenadorDto } from '../dto/create-coordenador.dto';
+import { UpdateCoordenadorDto } from '../dto/update-coordenador.dto';
 
 @Controller('/coordenadores')
 export class CoordenadorController {
@@ -35,21 +40,37 @@ export class CoordenadorController {
     return this.coordenadorService.findByCurso(curso);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() coordenador: Coordenador): Promise<Coordenador> {
-    return this.coordenadorService.create(coordenador);
+  create(@Body() dto: CreateCoordenadorDto): Promise<Coordenador> {
+    return this.coordenadorService.create(dto);
   }
 
-  @Put()
+  @UseGuards(JwtAuthGuard)
+  @Put('/:id')
   @HttpCode(HttpStatus.OK)
-  update(@Body() coordenador: Coordenador): Promise<Coordenador> {
-    return this.coordenadorService.update(coordenador);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateCoordenadorDto,
+  ): Promise<Coordenador | null> {
+    return this.coordenadorService.update(id, dto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete('/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   delete(@Param('id', ParseIntPipe) id: number) {
     return this.coordenadorService.delete(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('perfil')
+  @HttpCode(HttpStatus.OK)
+  getPerfil(@Request() req) {
+    return {
+      message: 'Usuário autenticado acessando Coordenador',
+      usuario: req.user,
+    };
   }
 }
