@@ -1,6 +1,12 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 
 @Controller()
 export class AppController {
-  constructor() {}
+  @Get()
+  status() {
+    return {
+      message: 'API Osiris rodando com sucesso 🚀',
+      timestamp: new Date().toISOString(),
+    };
+  }
 }

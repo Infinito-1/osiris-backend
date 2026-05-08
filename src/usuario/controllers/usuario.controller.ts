@@ -9,14 +9,13 @@ import {
   ParseIntPipe,
   Post,
   Put,
-  UseGuards,
-  Request,
 } from '@nestjs/common';
 import { UsuarioService } from '../services/usuario.service';
 import { Usuario } from '../entities/usuario.entity';
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { CreateUsuarioDto } from '../dto/create-usuario.dto';
+import { UpdateUsuarioDto } from '../dto/update-usuario.dto';
 
-@Controller('usuarios')
+@Controller('/usuarios')
 export class UsuarioController {
   constructor(private readonly usuarioService: UsuarioService) {}
 
@@ -26,7 +25,7 @@ export class UsuarioController {
     return this.usuarioService.findAll();
   }
 
-  @Get(':id')
+  @Get('/:id')
   @HttpCode(HttpStatus.OK)
   findById(@Param('id', ParseIntPipe) id: number): Promise<Usuario | null> {
     return this.usuarioService.findById(id);
@@ -34,34 +33,22 @@ export class UsuarioController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() usuario: Usuario): Promise<Usuario> {
-    return this.usuarioService.create(usuario);
+  create(@Body() dto: CreateUsuarioDto): Promise<Usuario> {
+    return this.usuarioService.create(dto);
   }
 
-  @Put(':id')
+  @Put('/:id')
   @HttpCode(HttpStatus.OK)
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() usuario: Usuario,
+    @Body() dto: UpdateUsuarioDto,
   ): Promise<Usuario | null> {
-    return this.usuarioService.update(id, usuario);
+    return this.usuarioService.update(id, dto);
   }
 
-  @Delete(':id')
+  @Delete('/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  delete(@Param('id', ParseIntPipe) id: number): Promise<void> {
+  delete(@Param('id', ParseIntPipe) id: number) {
     return this.usuarioService.delete(id);
-  }
-
-  // 🔒 Rota protegida com JWT
-  @UseGuards(JwtAuthGuard)
-  @Get('perfil')
-  @HttpCode(HttpStatus.OK)
-  getPerfil(@Request() req) {
-    // req.user vem do JwtStrategy.validate()
-    return {
-      message: 'Usuário autenticado com sucesso!',
-      usuario: req.user,
-    };
   }
 }
