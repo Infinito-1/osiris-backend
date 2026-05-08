@@ -5,6 +5,7 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { SemestreService } from '../services/semestre.service';
 import { Semestre } from '../entities/semestre.entity';
@@ -16,7 +17,6 @@ export class SemestreController {
   @Get()
   @HttpCode(HttpStatus.OK)
   findAll(): Promise<Semestre[]> {
-    //importar
     return this.semestreService.findAll();
   }
 
@@ -24,5 +24,19 @@ export class SemestreController {
   @HttpCode(HttpStatus.OK)
   findById(@Param('id', ParseIntPipe) id: number): Promise<Semestre | null> {
     return this.semestreService.findById(id);
+  }
+
+  @Get('/grupos')
+  findComGrupos(@Query('ids') ids: string) {
+    const idsArray = ids.split(',').map(Number);
+
+    return this.semestreService.findComGrupos(idsArray);
+  }
+
+  @Get('/grupos')
+  findComDemandas(@Query('ids') ids: string) {
+    const idsArray = ids.split(',').map(Number);
+
+    return this.semestreService.findComDemandas(idsArray);
   }
 }

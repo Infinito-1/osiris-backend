@@ -1,7 +1,7 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Semestre } from '../entities/semestre.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 //atualizar após ativar os relacionamentos
 @Injectable()
@@ -30,9 +30,7 @@ export class SemestreService implements OnApplicationBootstrap {
   }
 
   async findAll(): Promise<Semestre[]> {
-    return await this.semestreRepository.find({
-      relations: {},
-    });
+    return await this.semestreRepository.find();
   }
 
   async findById(id: number): Promise<Semestre | null> {
@@ -40,7 +38,31 @@ export class SemestreService implements OnApplicationBootstrap {
       where: {
         semIntId: id,
       },
-      relations: {},
+      relations: {
+        grupo: true,
+      },
+    });
+  }
+
+  async findComGrupos(ids: number[]): Promise<Semestre[]> {
+    return await this.semestreRepository.find({
+      where: {
+        semIntId: In(ids),
+      },
+      relations: {
+        grupo: true,
+      },
+    });
+  }
+
+  async findComDemandas(ids: number[]): Promise<Semestre[]> {
+    return await this.semestreRepository.find({
+      where: {
+        semIntId: In(ids),
+      },
+      relations: {
+        demanda: true,
+      },
     });
   }
 }

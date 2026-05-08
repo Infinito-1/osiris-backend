@@ -1,7 +1,7 @@
 import {
   Body,
   Controller,
-  Delete,
+  // Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -47,9 +47,9 @@ export class TipoDemandaController {
     return this.tipoDemandaService.update(tipoDemanda);
   }
 
-  @Delete('/:id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.tipoDemandaService.delete(id);
-  }
+  // @Delete('/:id')
+  // @HttpCode(HttpStatus.NO_CONTENT)
+  // delete(@Param('id', ParseIntPipe) id: number) {
+  //   return this.tipoDemandaService.delete(id);
+  // }
 }
