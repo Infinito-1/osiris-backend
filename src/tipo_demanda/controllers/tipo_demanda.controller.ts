@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { TipoDemandaService } from '../services/tipo_demanda.services';
 import { TipoDemanda } from '../entities/tipo_demanda.entity';
@@ -33,6 +34,13 @@ export class TipoDemandaController {
   @HttpCode(HttpStatus.OK)
   findByName(@Param('nome') nome: string): Promise<TipoDemanda[]> {
     return this.tipoDemandaService.findByName(nome);
+  }
+
+  @Get('/demandas')
+  findComDemandas(@Query('ids') ids: string) {
+    const idsArray = ids.split(',').map(Number);
+
+    return this.tipoDemandaService.findComDemandas(idsArray);
   }
 
   @Post()

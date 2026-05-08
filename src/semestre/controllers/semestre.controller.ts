@@ -33,7 +33,7 @@ export class SemestreController {
     return this.semestreService.findComGrupos(idsArray);
   }
 
-  @Get('/grupos')
+  @Get('/demandas')
   findComDemandas(@Query('ids') ids: string) {
     const idsArray = ids.split(',').map(Number);
 
