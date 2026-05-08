@@ -1,17 +1,12 @@
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  ParseIntPipe,
-  Post,
-  Put,
+  Body, Controller, Delete, Get, HttpCode, HttpStatus,
+  Param, ParseIntPipe, Post, Put, UseGuards
 } from '@nestjs/common';
 import { CandidaturaService } from '../services/candidatura.service';
 import { Candidatura } from '../entities/candidatura.entity';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { CreateCandidaturaDto } from '../dto/create-candidatura.dto';
+import { UpdateCandidaturaDto } from '../dto/update-candidatura.dto';
 
 @Controller('/candidaturas')
 export class CandidaturaController {
@@ -35,18 +30,24 @@ export class CandidaturaController {
     return this.candidaturaService.findByStatus(status);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() candidatura: Candidatura): Promise<Candidatura> {
-    return this.candidaturaService.create(candidatura);
+  create(@Body() dto: CreateCandidaturaDto): Promise<Candidatura> {
+    return this.candidaturaService.create(dto);
   }
 
-  @Put()
+  @UseGuards(JwtAuthGuard)
+  @Put('/:id')
   @HttpCode(HttpStatus.OK)
-  update(@Body() candidatura: Candidatura): Promise<Candidatura> {
-    return this.candidaturaService.update(candidatura);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateCandidaturaDto,
+  ): Promise<Candidatura | null> {
+    return this.candidaturaService.update(id, dto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete('/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   delete(@Param('id', ParseIntPipe) id: number) {
