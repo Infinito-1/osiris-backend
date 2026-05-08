@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { DemandaService } from '../services/demanda.service';
 import { Demanda } from '../entities/demanda.entity';
@@ -21,6 +22,14 @@ export class DemandaController {
   @HttpCode(HttpStatus.OK)
   findAll(): Promise<Demanda[]> {
     return this.demandaService.findAll();
+  }
+
+  @Get('/ordenado')
+  @HttpCode(HttpStatus.OK)
+  findAllOrdenado(
+    @Query('ordem') ordem: 'ASC' | 'DESC' = 'ASC', //estabelece ordem ASC como padrão
+  ): Promise<Demanda[]> {
+    return this.demandaService.findAllData(ordem);
   }
 
   @Get('/:id')
@@ -39,6 +48,12 @@ export class DemandaController {
   @HttpCode(HttpStatus.CREATED)
   create(@Body() demanda: Demanda): Promise<Demanda> {
     return this.demandaService.create(demanda);
+  }
+
+  @Put('/desativar/:id')
+  @HttpCode(HttpStatus.OK)
+  desativar(@Param('id', ParseIntPipe) id: number): Promise<Demanda> {
+    return this.demandaService.desativar(id);
   }
 
   @Put()
