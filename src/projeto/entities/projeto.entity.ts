@@ -3,10 +3,12 @@ import {
   Entity,
   JoinColumn,
   OneToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { IsNotEmpty } from 'class-validator';
 import { Candidatura } from '../../candidatura/entities/candidatura.entity';
+import { HistoricoProjeto } from '../../historico_projeto/entities/historico_projeto.entity';
 
 @Entity({ name: 'projeto' })
 export class Projeto {
@@ -24,4 +26,8 @@ export class Projeto {
   @OneToOne(() => Candidatura)
   @JoinColumn({ name: 'can_int_id' })
   candidatura!: Candidatura;
+
+  // 🔥 Adicione este relacionamento inverso
+  @OneToMany(() => HistoricoProjeto, (historico) => historico.projeto)
+  historicos!: HistoricoProjeto[];
 }

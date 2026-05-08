@@ -2,7 +2,7 @@ import {
   Column,
   Entity,
   JoinColumn,
-  OneToOne,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -16,21 +16,20 @@ export class HistoricoProjeto {
 
   @IsNotEmpty()
   @Column({ name: 'hsp_str_desc', length: 200, nullable: false })
-  hspStrDesc!: string;
+  hspStrDesc!: string; // descrição da atualização
 
   @IsNotEmpty()
   @Column({ name: 'hsp_str_link_projeto', length: 200, nullable: false })
-  hspStrLinkProjeto!: string;
+  hspStrLinkProjeto!: string; // link do repositório ou deploy
 
   @IsNotEmpty()
   @Column({ name: 'hsp_str_status', length: 100, nullable: false })
-  hspStrStatus!: string;
+  hspStrStatus!: string; // status do projeto
 
-  @UpdateDateColumn()
-  @Column({ name: 'hsp_date_data', type: 'date', nullable: false })
-  hspDateData!: Date;
+  @UpdateDateColumn({ name: 'hsp_date_data', type: 'timestamp' })
+  hspDateData!: Date; // data da atualização
 
-  @OneToOne(() => Projeto)
+  @ManyToOne(() => Projeto, (projeto) => projeto.historicos, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'pro_int_id' })
   projeto!: Projeto;
 }
