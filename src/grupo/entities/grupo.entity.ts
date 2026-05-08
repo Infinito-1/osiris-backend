@@ -50,6 +50,6 @@ export class Grupo {
   candidatura!: Candidatura[];
 
   @ManyToOne(() => Semestre, (semestre) => semestre.grupo)
-  @JoinColumn({ name: 'gru_int_id' })
+  @JoinColumn({ name: 'sem_int_id' })
   semestre!: Semestre;
 }

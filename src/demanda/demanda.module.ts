@@ -11,4 +11,3 @@ import { DemandaController } from './controllers/demanda.controller';
   exports: [],
 })
 export class DemandaModule {}
-

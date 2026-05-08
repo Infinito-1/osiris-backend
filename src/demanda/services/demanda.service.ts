@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { Demanda } from '../entities/demanda.entity';
 import { CreateDemandaDto } from '../dto/create-demanda.dto';
 import { UpdateDemandaDto } from '../dto/update-demanda.dto';
@@ -18,15 +18,22 @@ export class DemandaService {
 
   async findById(id: number): Promise<Demanda | null> {
     return this.demandaRepository.findOne({
-      where: { demIntId: id },
+      where: { demIntId: id, demBoolAtivo: true, demBoolAceitacao: true },
       relations: ['semestre', 'empreendedor', 'coordenador', 'tipo'],
     });
   }
 
   async findByNome(nome: string): Promise<Demanda[]> {
     return this.demandaRepository.find({
-      where: { demStrNome: nome },
+      where: { demStrNome: ILike(`%${nome}%`) },
       relations: ['semestre', 'empreendedor', 'coordenador', 'tipo'],
+    });
+  }
+
+  async findAllData(ordem: 'ASC' | 'DESC'): Promise<Demanda[]> {
+    return this.demandaRepository.find({
+      order: { demDataCriacao: ordem },
+      where: { demBoolAtivo: true, demBoolAceitacao: true },
     });
   }
 
@@ -51,6 +58,17 @@ export class DemandaService {
     if (dto.cooIntId) demanda.coordenador = { cooIntId: dto.cooIntId } as any;
     if (dto.tipIntIds) demanda.tipo = dto.tipIntIds.map((id) => ({ tipIntId: id } as any));
 
+    return this.demandaRepository.save(demanda);
+  }
+
+  async desativar(id: number): Promise<Demanda> {
+    const demanda = await this.demandaRepository.findOne({
+      where: { demIntId: id },
+    });
+    if (!demanda) {
+      throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
+    }
+    demanda.demBoolAtivo = false;
     return this.demandaRepository.save(demanda);
   }
 

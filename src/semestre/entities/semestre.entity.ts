@@ -3,8 +3,6 @@ import { IsNotEmpty } from 'class-validator';
 import { Grupo } from '../../grupo/entities/grupo.entity';
 import { Demanda } from '../../demanda/entities/demanda.entity';
 
-//adicionar relacionamentos com tab grupo, projetos e candidaturas
-
 @Entity({ name: 'semestres' })
 export class Semestre {
   @PrimaryGeneratedColumn({ name: 'sem_int_id' })

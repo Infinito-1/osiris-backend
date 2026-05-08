@@ -1,5 +1,6 @@
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   JoinTable,
@@ -40,7 +41,14 @@ export class Demanda {
   @Column({ name: 'dem_bool_aceitacao', default: false })
   demBoolAceitacao!: boolean;
 
-  @ManyToMany(() => TipoDemanda, (tipo) => tipo.demanda)
+  @CreateDateColumn({ name: 'dem_data_criacao' })
+  demDataCriacao!: Date;
+
+  @IsBoolean()
+  @Column({ name: 'dem_bool_ativo', default: true })
+  demBoolAtivo!: boolean;
+
+  @ManyToMany(() => TipoDemanda, (tipo) => tipo.demandas)
   @JoinTable({
     name: 'demanda_tipo_demanda', // tabela associativa
     joinColumn: {

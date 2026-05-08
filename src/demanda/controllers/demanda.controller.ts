@@ -1,6 +1,16 @@
 import {
-  Body, Controller, Delete, Get, HttpCode, HttpStatus,
-  Param, ParseIntPipe, Post, Put, UseGuards
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  Query,
+  UseGuards
 } from '@nestjs/common';
 import { DemandaService } from '../services/demanda.service';
 import { Demanda } from '../entities/demanda.entity';
@@ -16,6 +26,14 @@ export class DemandaController {
   @HttpCode(HttpStatus.OK)
   findAll(): Promise<Demanda[]> {
     return this.demandaService.findAll();
+  }
+
+  @Get('/ordenado')
+  @HttpCode(HttpStatus.OK)
+  findAllOrdenado(
+    @Query('ordem') ordem: 'ASC' | 'DESC' = 'ASC', //estabelece ordem ASC como padrão
+  ): Promise<Demanda[]> {
+    return this.demandaService.findAllData(ordem);
   }
 
   @Get('/:id')
@@ -37,6 +55,15 @@ export class DemandaController {
     return this.demandaService.create(dto);
   }
 
+
+  @UseGuards(JwtAuthGuard)
+  @Put('/desativar/:id')
+  @HttpCode(HttpStatus.OK)
+  desativar(@Param('id', ParseIntPipe) id: number): Promise<Demanda> {
+    return this.demandaService.desativar(id);
+  }
+
+ 
   @UseGuards(JwtAuthGuard)
   @Put('/:id')
   @HttpCode(HttpStatus.OK)
