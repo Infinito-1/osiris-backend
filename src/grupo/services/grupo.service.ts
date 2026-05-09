@@ -13,7 +13,9 @@ export class GrupoService {
   ) {}
 
   async findAll(): Promise<Grupo[]> {
-    return this.grupoRepository.find();
+    return this.grupoRepository.find({
+      relations: ['semestre'],
+    });
   }
 
   async findById(id: number): Promise<Grupo | null> {
@@ -26,6 +28,7 @@ export class GrupoService {
   async findByName(nome: string): Promise<Grupo[]> {
     return this.grupoRepository.find({
       where: { gruStrNome: ILike(`%${nome}%`) },
+      relations: ['semestre'],
     });
   }
 
