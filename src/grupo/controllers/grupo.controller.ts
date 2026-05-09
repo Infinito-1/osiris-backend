@@ -1,6 +1,16 @@
 import {
-  Body, Controller, Delete, Get, HttpCode, HttpStatus,
-  Param, ParseIntPipe, Post, Put, UseGuards, Request
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { GrupoService } from '../services/grupo.service';
 import { Grupo } from '../entities/grupo.entity';
@@ -47,13 +57,18 @@ export class GrupoController {
     return this.grupoService.create(dto);
   }
 
+  
   @UseGuards(JwtAuthGuard)
-  @Put('/:id')
-  @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Atualiza um grupo existente' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateGrupoDto): Promise<Grupo | null> {
-    return this.grupoService.update(id, dto);
-  }
+@Put('/:id')
+@HttpCode(HttpStatus.OK)
+@ApiResponse({ status: 200, description: 'Atualiza um grupo existente' })
+update(
+  @Param('id', ParseIntPipe) id: number,
+  @Body() dto: UpdateGrupoDto,
+): Promise<Grupo | null> {
+  return this.grupoService.update(id, dto);
+}
+
 
   @UseGuards(JwtAuthGuard)
   @Delete('/:id')
@@ -68,6 +83,9 @@ export class GrupoController {
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: 'Retorna perfil do grupo autenticado' })
   getPerfil(@Request() req) {
-    return { message: 'Usuário autenticado acessando Grupo', usuario: req.user };
+    return {
+      message: 'Usuário autenticado acessando Grupo',
+      usuario: req.user,
+    };
   }
 }
