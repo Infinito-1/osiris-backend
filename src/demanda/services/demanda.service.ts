@@ -13,7 +13,9 @@ export class DemandaService {
   ) {}
 
   async findAll(): Promise<Demanda[]> {
-    return this.demandaRepository.find({ relations: ['semestre', 'empreendedor', 'coordenador', 'tipo'] });
+    return this.demandaRepository.find({
+      relations: ['semestre', 'empreendedor', 'coordenador', 'tipo'],
+    });
   }
 
   async findById(id: number): Promise<Demanda | null> {
@@ -34,37 +36,51 @@ export class DemandaService {
     return this.demandaRepository.find({
       order: { demDataCriacao: ordem },
       where: { demBoolAtivo: true, demBoolAceitacao: true },
+      relations: ['semestre', 'empreendedor', 'coordenador', 'tipo'],
     });
   }
 
   async create(dto: CreateDemandaDto): Promise<Demanda> {
     const demanda = this.demandaRepository.create({
-      ...dto,
+      demStrNome: dto.demStrNome,
+      demStrDescricao: dto.demStrDescricao,
+      demBoolAceitaMudancaTipo: dto.demBoolAceitaMudancaTipo,
+      demBoolAceitacao: dto.demBoolAceitacao,
       semestre: { semIntId: dto.semIntId } as any,
       empreendedor: { empIntId: dto.empIntId } as any,
       coordenador: { cooIntId: dto.cooIntId } as any,
       tipo: dto.tipIntIds?.map((id) => ({ tipIntId: id } as any)),
     });
+
     return this.demandaRepository.save(demanda);
   }
 
   async update(id: number, dto: UpdateDemandaDto): Promise<Demanda | null> {
     const demanda = await this.findById(id);
-    if (!demanda) return null;
+    if (!demanda) {
+      throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
+    }
 
-    Object.assign(demanda, dto);
+    if (dto.demStrNome) demanda.demStrNome = dto.demStrNome;
+    if (dto.demStrDescricao) demanda.demStrDescricao = dto.demStrDescricao;
+    if (dto.demBoolAceitaMudancaTipo !== undefined) {
+      demanda.demBoolAceitaMudancaTipo = dto.demBoolAceitaMudancaTipo;
+    }
+    if (dto.demBoolAceitacao !== undefined) {
+      demanda.demBoolAceitacao = dto.demBoolAceitacao;
+    }
     if (dto.semIntId) demanda.semestre = { semIntId: dto.semIntId } as any;
     if (dto.empIntId) demanda.empreendedor = { empIntId: dto.empIntId } as any;
     if (dto.cooIntId) demanda.coordenador = { cooIntId: dto.cooIntId } as any;
-    if (dto.tipIntIds) demanda.tipo = dto.tipIntIds.map((id) => ({ tipIntId: id } as any));
+    if (dto.tipIntIds) {
+      demanda.tipo = dto.tipIntIds.map((id) => ({ tipIntId: id } as any));
+    }
 
     return this.demandaRepository.save(demanda);
   }
 
   async desativar(id: number): Promise<Demanda> {
-    const demanda = await this.demandaRepository.findOne({
-      where: { demIntId: id },
-    });
+    const demanda = await this.demandaRepository.findOne({ where: { demIntId: id } });
     if (!demanda) {
       throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
     }
@@ -72,7 +88,11 @@ export class DemandaService {
     return this.demandaRepository.save(demanda);
   }
 
-  async delete(id: number) {
-    return this.demandaRepository.delete(id);
+  async delete(id: number): Promise<void> {
+    const demanda = await this.demandaRepository.findOne({ where: { demIntId: id } });
+    if (!demanda) {
+      throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
+    }
+    await this.demandaRepository.delete(id);
   }
 }

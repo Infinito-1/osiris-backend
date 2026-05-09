@@ -7,13 +7,14 @@ import { Usuario } from '../usuario/entities/usuario.entity';
 @Injectable()
 export class AuthService {
   constructor(
-    private jwtService: JwtService,
-    private usuarioService: UsuarioService,
+    private readonly jwtService: JwtService,
+    private readonly usuarioService: UsuarioService,
   ) {}
 
   async validateUser(email: string, senha: string): Promise<Usuario | null> {
     const usuario = await this.usuarioService.findByEmail(email);
     if (usuario && await bcrypt.compare(senha, usuario.usuStrSenha)) {
+      // remove senha antes de retornar
       const { usuStrSenha, ...result } = usuario;
       return result as Usuario;
     }
@@ -21,10 +22,10 @@ export class AuthService {
   }
 
   async login(usuario: Usuario) {
-    const payload = { 
-      username: usuario.usuStrEmail, 
-      sub: usuario.usuIntId, 
-      role: usuario.usuStrTipo // papel do usuário incluído no token
+    const payload = {
+      username: usuario.usuStrEmail,
+      sub: usuario.usuIntId,
+      role: usuario.usuStrTipo,
     };
     return {
       access_token: this.jwtService.sign(payload),

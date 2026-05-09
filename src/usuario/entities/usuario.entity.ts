@@ -1,5 +1,5 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
-import { IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsEmail, MinLength } from 'class-validator';
 
 @Entity({ name: 'usuario' })
 export class Usuario {
@@ -11,11 +11,11 @@ export class Usuario {
   usuStrNome!: string;
 
   @Column({ name: 'usu_str_email', type: 'varchar', length: 255, unique: true })
-  @IsNotEmpty()
+  @IsEmail()
   usuStrEmail!: string;
 
   @Column({ name: 'usu_str_senha', type: 'varchar', length: 255 })
-  @IsNotEmpty()
+  @MinLength(6)
   usuStrSenha!: string;
 
   @Column({
@@ -24,7 +24,7 @@ export class Usuario {
     length: 15,
     nullable: true,
   })
-  usuStrTelefone!: string;
+  usuStrTelefone?: string;
 
   @Column({
     name: 'usu_str_tipo',

@@ -1,10 +1,4 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  OneToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { IsBoolean } from 'class-validator';
 import { Usuario } from '../../usuario/entities/usuario.entity';
 
@@ -17,7 +11,6 @@ export class Admin {
   @Column({ name: 'adm_bool_ativo', default: true })
   admBolAtivo!: boolean;
 
-  // Relacionamento direto com Usuario
   @OneToOne(() => Usuario, { eager: true })
   @JoinColumn({ name: 'usu_int_id' })
   usuario!: Usuario;

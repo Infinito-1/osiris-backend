@@ -12,7 +12,8 @@ export class DevService implements TypeOrmOptionsFactory {
       password: 'root',
       database: 'db_osiris',
       autoLoadEntities: true,
-      synchronize: true,
+      synchronize: false, // desligado para usar migrations
+      migrations: [__dirname + '/../migrations/*{.ts,.js}'],
     };
   }
 }

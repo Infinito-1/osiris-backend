@@ -1,23 +1,17 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
-import { IsNotEmpty, IsBoolean } from 'class-validator';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { IsBoolean } from 'class-validator';
 import { Coordenador } from '../../coordenador/entities/coordenador.entity';
 import { Demanda } from '../../demanda/entities/demanda.entity';
 import { Grupo } from '../../grupo/entities/grupo.entity';
+import { StatusCandidatura } from '../dto/status.enum';
 
 @Entity({ name: 'candidaturas' })
 export class Candidatura {
   @PrimaryGeneratedColumn({ name: 'can_int_id' })
   canIntId!: number;
 
-  @IsNotEmpty()
-  @Column({ name: 'can_str_status', length: 50, nullable: false })
-  canStrStatus!: string;
+  @Column({ name: 'can_str_status', type: 'enum', enum: StatusCandidatura })
+  canStrStatus!: StatusCandidatura;
 
   @IsBoolean()
   @Column({ name: 'can_bool_aprovacao', default: false })

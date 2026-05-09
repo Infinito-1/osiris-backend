@@ -16,7 +16,7 @@ export class Coordenador {
   @PrimaryGeneratedColumn({ name: 'coo_int_id' })
   cooIntId!: number;
 
-  @OneToOne(() => Usuario)
+  @OneToOne(() => Usuario, { eager: true })
   @JoinColumn({ name: 'usu_int_id' })
   usuario!: Usuario;
 

@@ -1,16 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { Usuario } from '../entities/usuario.entity';
 import { CreateUsuarioDto } from '../dto/create-usuario.dto';
 import { UpdateUsuarioDto } from '../dto/update-usuario.dto';
-import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsuarioService {
   constructor(
     @InjectRepository(Usuario)
-    private usuarioRepository: Repository<Usuario>,
+    private readonly usuarioRepository: Repository<Usuario>,
   ) {}
 
   async findAll(): Promise<Usuario[]> {
@@ -26,7 +26,13 @@ export class UsuarioService {
   }
 
   async create(dto: CreateUsuarioDto): Promise<Usuario> {
-    const salt = await bcrypt.genSalt();
+    // Verifica se já existe usuário com o mesmo email
+    const existing = await this.findByEmail(dto.usuStrEmail);
+    if (existing) {
+      throw new HttpException('Email já cadastrado', HttpStatus.CONFLICT);
+    }
+
+    const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(dto.usuStrSenha, salt);
 
     const novoUsuario = this.usuarioRepository.create({
@@ -39,10 +45,13 @@ export class UsuarioService {
 
   async update(id: number, dto: UpdateUsuarioDto): Promise<Usuario | null> {
     const usuario = await this.findById(id);
-    if (!usuario) return null;
+    if (!usuario) {
+      throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
+    }
 
+    // Se senha foi informada, gera novo hash
     if (dto.usuStrSenha) {
-      const salt = await bcrypt.genSalt();
+      const salt = await bcrypt.genSalt(10);
       dto.usuStrSenha = await bcrypt.hash(dto.usuStrSenha, salt);
     }
 
@@ -51,6 +60,10 @@ export class UsuarioService {
   }
 
   async delete(id: number): Promise<void> {
+    const usuario = await this.findById(id);
+    if (!usuario) {
+      throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
+    }
     await this.usuarioRepository.delete(id);
   }
 }

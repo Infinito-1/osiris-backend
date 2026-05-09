@@ -14,6 +14,7 @@ export class ProdService implements TypeOrmOptionsFactory {
       },
       synchronize: false,
       autoLoadEntities: true,
+      migrations: [__dirname + '/../migrations/*{.ts,.js}'],
     };
   }
 }

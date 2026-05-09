@@ -1,10 +1,11 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Admin } from '../entities/admin.entity';
 import { Usuario } from '../../usuario/entities/usuario.entity';
 import { Demanda } from '../../demanda/entities/demanda.entity';
 import { Projeto } from '../../projeto/entities/projeto.entity';
+import { UpdateDemandaDto } from '../../demanda/dto/update-demanda.dto';
 
 @Injectable()
 export class AdminService {
@@ -21,7 +22,7 @@ export class AdminService {
 
   async criarAdmin(usuarioId: number): Promise<Admin> {
     const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: usuarioId } });
-    if (!usuario) throw new BadRequestException('Usuário não encontrado');
+    if (!usuario) throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
 
     usuario.usuStrTipo = 'Admin';
     await this.usuarioRepository.save(usuario);
@@ -32,10 +33,10 @@ export class AdminService {
 
   async removerAdmin(id: number): Promise<void> {
     const admin = await this.adminRepository.findOne({ where: { admIntId: id }, relations: ['usuario'] });
-    if (!admin) throw new BadRequestException('Admin não encontrado');
+    if (!admin) throw new HttpException('Admin não encontrado', HttpStatus.NOT_FOUND);
 
     const admins = await this.adminRepository.count({ where: { admBolAtivo: true } });
-    if (admins <= 1) throw new BadRequestException('Não é permitido remover o último administrador');
+    if (admins <= 1) throw new HttpException('Não é permitido remover o último administrador', HttpStatus.FORBIDDEN);
 
     admin.usuario.usuStrTipo = 'Coordenador';
     await this.usuarioRepository.save(admin.usuario);
@@ -44,18 +45,18 @@ export class AdminService {
 
   async excluirUsuario(id: number): Promise<void> {
     const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: id } });
-    if (!usuario) throw new BadRequestException('Usuário não encontrado');
+    if (!usuario) throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
 
     if (usuario.usuStrTipo === 'Admin') {
-      throw new BadRequestException('Não é permitido excluir administradores diretamente');
+      throw new HttpException('Não é permitido excluir administradores diretamente', HttpStatus.FORBIDDEN);
     }
 
     await this.usuarioRepository.delete(id);
   }
 
-  async gerenciarDemanda(id: number, dados: Partial<Demanda>): Promise<Demanda> {
+  async gerenciarDemanda(id: number, dados: UpdateDemandaDto): Promise<Demanda> {
     const demanda = await this.demandaRepository.findOne({ where: { demIntId: id } });
-    if (!demanda) throw new BadRequestException('Demanda não encontrada');
+    if (!demanda) throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
 
     Object.assign(demanda, dados);
     return this.demandaRepository.save(demanda);
@@ -63,7 +64,7 @@ export class AdminService {
 
   async excluirProjeto(id: number): Promise<void> {
     const projeto = await this.projetoRepository.findOne({ where: { proIntId: id } });
-    if (!projeto) throw new BadRequestException('Projeto não encontrado');
+    if (!projeto) throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
 
     await this.projetoRepository.delete(id);
   }

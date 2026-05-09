@@ -9,7 +9,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { IsNotEmpty, IsBoolean } from 'class-validator';
+import { IsNotEmpty, IsBoolean, IsString } from 'class-validator';
 import { Empreendedor } from '../../empreendedor/entities/empreendedor.entity';
 import { Coordenador } from '../../coordenador/entities/coordenador.entity';
 import { Candidatura } from '../../candidatura/entities/candidatura.entity';
@@ -22,15 +22,17 @@ export class Demanda {
   demIntId!: number;
 
   @IsNotEmpty()
+  @IsString()
   @Column({ name: 'dem_str_nome', length: 100, nullable: false })
   demStrNome!: string;
 
   @IsNotEmpty()
+  @IsString()
   @Column({ name: 'dem_str_descricao', length: 255, nullable: false })
   demStrDescricao!: string;
 
   @ManyToOne(() => Semestre, (semestre) => semestre.demanda)
-  @JoinColumn({ name: 'dem_int_semestre_recomendado' })
+  @JoinColumn({ name: 'sem_int_id' })
   semestre!: Semestre;
 
   @IsBoolean()
@@ -50,15 +52,9 @@ export class Demanda {
 
   @ManyToMany(() => TipoDemanda, (tipo) => tipo.demandas)
   @JoinTable({
-    name: 'demanda_tipo_demanda', // tabela associativa
-    joinColumn: {
-      name: 'dem_int_id',
-      referencedColumnName: 'demIntId',
-    },
-    inverseJoinColumn: {
-      name: 'tip_int_id',
-      referencedColumnName: 'tipIntId',
-    },
+    name: 'demanda_tipo_demanda',
+    joinColumn: { name: 'dem_int_id', referencedColumnName: 'demIntId' },
+    inverseJoinColumn: { name: 'tip_int_id', referencedColumnName: 'tipIntId' },
   })
   tipo!: TipoDemanda[];
 
