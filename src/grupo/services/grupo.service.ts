@@ -13,17 +13,19 @@ export class GrupoService {
   ) {}
 
   async findAll(): Promise<Grupo[]> {
-    return this.grupoRepository.find({ relations: ['usuario'] });
+    return this.grupoRepository.find();
   }
 
   async findById(id: number): Promise<Grupo | null> {
-    return this.grupoRepository.findOne({ where: { gruIntId: id }, relations: ['usuario'] });
+    return this.grupoRepository.findOne({
+      where: { gruIntId: id },
+      relations: ['usuario'],
+    });
   }
 
   async findByName(nome: string): Promise<Grupo[]> {
     return this.grupoRepository.find({
       where: { gruStrNome: ILike(`%${nome}%`) },
-      relations: ['usuario'],
     });
   }
 

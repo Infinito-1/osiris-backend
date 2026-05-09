@@ -1,6 +1,16 @@
 import {
-  Body, Controller, Delete, Get, HttpCode, HttpStatus,
-  Param, ParseIntPipe, Post, Put, UseGuards, Request
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { GrupoService } from '../services/grupo.service';
 import { Grupo } from '../entities/grupo.entity';
@@ -24,7 +34,7 @@ export class GrupoController {
     return this.grupoService.findById(id);
   }
 
-  @Get('grupo/:gruStrNome')
+  @Get('/:gruStrNome')
   @HttpCode(HttpStatus.OK)
   findByName(@Param('gruStrNome') grupo: string): Promise<Grupo[]> {
     return this.grupoService.findByName(grupo);
@@ -40,7 +50,10 @@ export class GrupoController {
   @UseGuards(JwtAuthGuard)
   @Put('/:id')
   @HttpCode(HttpStatus.OK)
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateGrupoDto): Promise<Grupo | null> {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateGrupoDto,
+  ): Promise<Grupo | null> {
     return this.grupoService.update(id, dto);
   }
 
@@ -55,6 +68,9 @@ export class GrupoController {
   @Get('perfil')
   @HttpCode(HttpStatus.OK)
   getPerfil(@Request() req) {
-    return { message: 'Usuário autenticado acessando Grupo', usuario: req.user };
+    return {
+      message: 'Usuário autenticado acessando Grupo',
+      usuario: req.user,
+    };
   }
 }
