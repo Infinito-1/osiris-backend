@@ -31,7 +31,8 @@ export class GrupoController {
     return this.grupoService.findById(id);
   }
 
-  @Get('grupo/:gruStrNome')
+ 
+  @Get('/nome/:gruStrNome')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: 'Busca grupos pelo nome' })
   findByName(@Param('gruStrNome') grupo: string): Promise<Grupo[]> {
