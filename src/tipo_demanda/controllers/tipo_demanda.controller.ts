@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  // Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -13,6 +12,8 @@ import {
 } from '@nestjs/common';
 import { TipoDemandaService } from '../services/tipo_demanda.services';
 import { TipoDemanda } from '../entities/tipo_demanda.entity';
+import { CreateTipoDemandaDto } from '../dto/create-tipo-demanda.dto';
+import { UpdateTipoDemandaDto } from '../dto/update-tipo-demanda.dto';
 
 @Controller('/tipos-demanda')
 export class TipoDemandaController {
@@ -39,25 +40,21 @@ export class TipoDemandaController {
   @Get('/demandas')
   findComDemandas(@Query('ids') ids: string) {
     const idsArray = ids.split(',').map(Number);
-
     return this.tipoDemandaService.findComDemandas(idsArray);
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() tipoDemanda: TipoDemanda): Promise<TipoDemanda> {
-    return this.tipoDemandaService.create(tipoDemanda);
+  create(@Body() dto: CreateTipoDemandaDto): Promise<TipoDemanda> {
+    return this.tipoDemandaService.create(dto);
   }
 
-  @Put()
+  @Put(':id')
   @HttpCode(HttpStatus.OK)
-  update(@Body() tipoDemanda: TipoDemanda): Promise<TipoDemanda> {
-    return this.tipoDemandaService.update(tipoDemanda);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateTipoDemandaDto,
+  ): Promise<TipoDemanda> {
+    return this.tipoDemandaService.update(id, dto);
   }
-
-  // @Delete('/:id')
-  // @HttpCode(HttpStatus.NO_CONTENT)
-  // delete(@Param('id', ParseIntPipe) id: number) {
-  //   return this.tipoDemandaService.delete(id);
-  // }
 }

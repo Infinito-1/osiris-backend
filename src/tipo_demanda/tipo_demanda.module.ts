@@ -8,6 +8,6 @@ import { TipoDemandaController } from './controllers/tipo_demanda.controller';
   imports: [TypeOrmModule.forFeature([TipoDemanda])],
   providers: [TipoDemandaService],
   controllers: [TipoDemandaController],
-  exports: [],
+  exports: [TipoDemandaService], // 🔧 exporta o service para outros módulos
 })
 export class TipoDemandaModule {}

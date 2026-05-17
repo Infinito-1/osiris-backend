@@ -4,12 +4,15 @@ import { ILike, Repository } from 'typeorm';
 import { Demanda } from '../entities/demanda.entity';
 import { CreateDemandaDto } from '../dto/create-demanda.dto';
 import { UpdateDemandaDto } from '../dto/update-demanda.dto';
+import { TipoDemanda } from '../../tipo_demanda/entities/tipo_demanda.entity';
+import { TipoDemandaService } from '../../tipo_demanda/services/tipo_demanda.services';
 
 @Injectable()
 export class DemandaService {
   constructor(
     @InjectRepository(Demanda)
     private readonly demandaRepository: Repository<Demanda>,
+    private readonly tipoDemandaService: TipoDemandaService, // injetando o service de TipoDemanda
   ) {}
 
   async findAll(): Promise<Demanda[]> {
@@ -41,6 +44,24 @@ export class DemandaService {
   }
 
   async create(dto: CreateDemandaDto): Promise<Demanda> {
+    const tipos: TipoDemanda[] = [];
+
+    // IDs de tipos existentes
+    if (dto.tipIntIds) {
+      for (const id of dto.tipIntIds) {
+        const tipo = await this.tipoDemandaService.findById(id);
+        if (tipo) tipos.push(tipo);
+      }
+    }
+
+    // Nomes de tipos novos ou existentes
+    if (dto.tipStrNomes) {
+      for (const nome of dto.tipStrNomes) {
+        const tipo = await this.tipoDemandaService.findOrCreate(nome);
+        tipos.push(tipo);
+      }
+    }
+
     const demanda = this.demandaRepository.create({
       demStrNome: dto.demStrNome,
       demStrDescricao: dto.demStrDescricao,
@@ -49,7 +70,7 @@ export class DemandaService {
       semestre: { semIntId: dto.semIntId } as any,
       empreendedor: { empIntId: dto.empIntId } as any,
       coordenador: { cooIntId: dto.cooIntId } as any,
-      tipo: dto.tipIntIds?.map((id) => ({ tipIntId: id } as any)),
+      tipo: tipos,
     });
 
     return this.demandaRepository.save(demanda);
@@ -63,18 +84,26 @@ export class DemandaService {
 
     if (dto.demStrNome) demanda.demStrNome = dto.demStrNome;
     if (dto.demStrDescricao) demanda.demStrDescricao = dto.demStrDescricao;
-    if (dto.demBoolAceitaMudancaTipo !== undefined) {
-      demanda.demBoolAceitaMudancaTipo = dto.demBoolAceitaMudancaTipo;
-    }
-    if (dto.demBoolAceitacao !== undefined) {
-      demanda.demBoolAceitacao = dto.demBoolAceitacao;
-    }
+    if (dto.demBoolAceitaMudancaTipo !== undefined) demanda.demBoolAceitaMudancaTipo = dto.demBoolAceitaMudancaTipo;
+    if (dto.demBoolAceitacao !== undefined) demanda.demBoolAceitacao = dto.demBoolAceitacao;
     if (dto.semIntId) demanda.semestre = { semIntId: dto.semIntId } as any;
     if (dto.empIntId) demanda.empreendedor = { empIntId: dto.empIntId } as any;
     if (dto.cooIntId) demanda.coordenador = { cooIntId: dto.cooIntId } as any;
+
+    const tipos: TipoDemanda[] = [];
     if (dto.tipIntIds) {
-      demanda.tipo = dto.tipIntIds.map((id) => ({ tipIntId: id } as any));
+      for (const id of dto.tipIntIds) {
+        const tipo = await this.tipoDemandaService.findById(id);
+        if (tipo) tipos.push(tipo);
+      }
     }
+    if (dto.tipStrNomes) {
+      for (const nome of dto.tipStrNomes) {
+        const tipo = await this.tipoDemandaService.findOrCreate(nome);
+        tipos.push(tipo);
+      }
+    }
+    if (tipos.length > 0) demanda.tipo = tipos;
 
     return this.demandaRepository.save(demanda);
   }

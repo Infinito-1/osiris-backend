@@ -41,4 +41,9 @@ export class UpdateDemandaDto {
   @IsOptional()
   @IsArray()
   tipIntIds?: number[];
+
+  @ApiProperty({ example: ['Sistema Web', 'Novo Tipo'], description: 'Nomes dos tipos de demanda vinculados', required: false })
+  @IsOptional()
+  @IsArray()
+  tipStrNomes?: string[];
 }

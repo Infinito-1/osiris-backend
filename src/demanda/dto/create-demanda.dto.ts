@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsBoolean, IsInt, IsArray } from 'class-validator';
+import { IsNotEmpty, IsString, IsBoolean, IsInt, IsArray, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateDemandaDto {
@@ -32,7 +32,13 @@ export class CreateDemandaDto {
   @IsInt()
   cooIntId: number;
 
-  @ApiProperty({ example: [1, 2], description: 'IDs dos tipos de demanda vinculados' })
+  @ApiProperty({ example: [1, 2], description: 'IDs dos tipos de demanda vinculados', required: false })
+  @IsOptional()
   @IsArray()
-  tipIntIds: number[];
+  tipIntIds?: number[];
+
+  @ApiProperty({ example: ['Sistema Web', 'Novo Tipo'], description: 'Nomes dos tipos de demanda vinculados', required: false })
+  @IsOptional()
+  @IsArray()
+  tipStrNomes?: string[];
 }

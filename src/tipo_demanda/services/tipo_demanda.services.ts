@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TipoDemanda } from '../entities/tipo_demanda.entity';
 import { ILike, In, Repository } from 'typeorm';
-// import { DeleteResult } from 'typeorm/browser';
+import { CreateTipoDemandaDto } from '../dto/create-tipo-demanda.dto';
+import { UpdateTipoDemandaDto } from '../dto/update-tipo-demanda.dto';
 
 @Injectable()
 export class TipoDemandaService implements OnApplicationBootstrap {
@@ -34,47 +35,45 @@ export class TipoDemandaService implements OnApplicationBootstrap {
 
   async findById(id: number): Promise<TipoDemanda | null> {
     return await this.tipoDemandaRepository.findOne({
-      where: {
-        tipIntId: id,
-      },
+      where: { tipIntId: id },
     });
   }
 
   async findByName(tipStrNome: string): Promise<TipoDemanda[]> {
     return await this.tipoDemandaRepository.find({
-      where: {
-        tipStrNome: ILike(`%${tipStrNome}%`),
-      },
-      relations: {
-        demandas: true,
-      },
+      where: { tipStrNome: ILike(`%${tipStrNome}%`) },
+      relations: { demandas: true },
     });
   }
 
   async findComDemandas(ids: number[]): Promise<TipoDemanda[]> {
     return await this.tipoDemandaRepository.find({
-      where: {
-        tipIntId: In(ids),
-      },
-      relations: {
-        demandas: true,
-      },
+      where: { tipIntId: In(ids) },
+      relations: { demandas: true },
     });
   }
 
-  async create(tipoDemanda: TipoDemanda): Promise<TipoDemanda> {
-    return await this.tipoDemandaRepository.save(tipoDemanda);
+  async create(dto: CreateTipoDemandaDto): Promise<TipoDemanda> {
+    const tipo = this.tipoDemandaRepository.create(dto);
+    return await this.tipoDemandaRepository.save(tipo);
   }
 
-  async update(tipoDemanda: TipoDemanda): Promise<TipoDemanda> {
-    await this.findById(tipoDemanda.tipIntId);
+  async update(id: number, dto: UpdateTipoDemandaDto): Promise<TipoDemanda> {
+    const tipo = await this.findById(id);
+    if (!tipo) throw new HttpException('Tipo de demanda não encontrado', HttpStatus.NOT_FOUND);
 
-    return await this.tipoDemandaRepository.save(tipoDemanda);
+    if (dto.tipStrNome) tipo.tipStrNome = dto.tipStrNome;
+
+    return await this.tipoDemandaRepository.save(tipo);
   }
 
-  // async delete(id: number): Promise<DeleteResult> {
-  //   await this.findById(id);
-
-  //   return await this.tipoDemandaRepository.delete(id);
-  // }
+  // 🔧 Novo método para criar automaticamente se não existir
+  async findOrCreate(nome: string): Promise<TipoDemanda> {
+    let tipo = await this.tipoDemandaRepository.findOne({ where: { tipStrNome: nome } });
+    if (!tipo) {
+      tipo = this.tipoDemandaRepository.create({ tipStrNome: nome });
+      tipo = await this.tipoDemandaRepository.save(tipo);
+    }
+    return tipo;
+  }
 }

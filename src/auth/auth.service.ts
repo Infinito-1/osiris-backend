@@ -14,7 +14,6 @@ export class AuthService {
   async validateUser(email: string, senha: string): Promise<Usuario | null> {
     const usuario = await this.usuarioService.findByEmail(email);
     if (usuario && await bcrypt.compare(senha, usuario.usuStrSenha)) {
-      // remove senha antes de retornar
       const { usuStrSenha, ...result } = usuario;
       return result as Usuario;
     }
@@ -25,7 +24,7 @@ export class AuthService {
     const payload = {
       username: usuario.usuStrEmail,
       sub: usuario.usuIntId,
-      role: usuario.usuStrTipo,
+      role: usuario.usuStrTipo, // 🔧 role vem da entidade Usuario
     };
     return {
       access_token: this.jwtService.sign(payload),

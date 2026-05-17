@@ -15,6 +15,8 @@ import {
 import { DemandaService } from '../services/demanda.service';
 import { Demanda } from '../entities/demanda.entity';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { RolesGuard } from '../../auth/roles.guard'; // 🔧 precisa de um guard de roles
+import { Roles } from '../../auth/roles.decorator'; // 🔧 decorator para roles
 import { CreateDemandaDto } from '../dto/create-demanda.dto';
 import { UpdateDemandaDto } from '../dto/update-demanda.dto';
 
@@ -22,11 +24,11 @@ import { UpdateDemandaDto } from '../dto/update-demanda.dto';
 import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Demandas')
-@ApiBearerAuth()
 @Controller('demandas')
 export class DemandaController {
   constructor(private readonly demandaService: DemandaService) {}
 
+  // 📌 VISUALIZAÇÃO (aberto para todos, inclusive não logados)
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: 'Lista todas as demandas' })
@@ -57,25 +59,23 @@ export class DemandaController {
     return this.demandaService.findByNome(nome);
   }
 
-  @UseGuards(JwtAuthGuard)
+  // 📌 CRIAÇÃO (coordenador, empreendedor e admin)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('coordenador', 'empreendedor', 'admin')
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiBearerAuth()
   @ApiResponse({ status: 201, description: 'Cria uma nova demanda' })
   create(@Body() dto: CreateDemandaDto): Promise<Demanda> {
     return this.demandaService.create(dto);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Put('desativar/:id')
-  @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Desativa uma demanda existente' })
-  desativar(@Param('id', ParseIntPipe) id: number): Promise<Demanda> {
-    return this.demandaService.desativar(id);
-  }
-
-  @UseGuards(JwtAuthGuard)
+  // 📌 ATUALIZAÇÃO (coordenador, empreendedor e admin)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('coordenador', 'empreendedor', 'admin')
   @Put(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
   @ApiResponse({ status: 200, description: 'Atualiza uma demanda existente' })
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -84,11 +84,25 @@ export class DemandaController {
     return this.demandaService.update(id, dto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  // 📌 DESATIVAR (coordenador, empreendedor e admin)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('coordenador', 'empreendedor', 'admin')
+  @Put('desativar/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiResponse({ status: 200, description: 'Desativa uma demanda existente' })
+  desativar(@Param('id', ParseIntPipe) id: number): Promise<Demanda> {
+    return this.demandaService.desativar(id);
+  }
+
+  // 📌 DELETAR (somente admin)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiResponse({ status: 204, description: 'Remove uma demanda' })
-  delete(@Param('id', ParseIntPipe) id: number) {
+  @ApiBearerAuth()
+  @ApiResponse({ status: 204, description: 'Remove uma demanda definitivamente (somente admin)' })
+  delete(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.demandaService.delete(id);
   }
 }

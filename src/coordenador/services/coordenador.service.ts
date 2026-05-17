@@ -5,6 +5,11 @@ import { Coordenador } from '../entities/coordenador.entity';
 import { CreateCoordenadorDto } from '../dto/create-coordenador.dto';
 import { UpdateCoordenadorDto } from '../dto/update-coordenador.dto';
 import { Usuario } from '../../usuario/entities/usuario.entity';
+import { Demanda } from '../../demanda/entities/demanda.entity';
+import { Candidatura } from '../../candidatura/entities/candidatura.entity';
+import { ClassificarDemandaDto } from '../dto/classificar-demanda.dto';
+import { GerenciarCandidaturaDto } from '../dto/gerenciar-candidatura.dto';
+import { StatusCandidatura } from '../../candidatura/dto/status.enum';
 
 @Injectable()
 export class CoordenadorService {
@@ -13,6 +18,10 @@ export class CoordenadorService {
     private readonly coordenadorRepository: Repository<Coordenador>,
     @InjectRepository(Usuario)
     private readonly usuarioRepository: Repository<Usuario>,
+    @InjectRepository(Demanda)
+    private readonly demandaRepository: Repository<Demanda>,
+    @InjectRepository(Candidatura)
+    private readonly candidaturaRepository: Repository<Candidatura>,
   ) {}
 
   async findAll(): Promise<Coordenador[]> {
@@ -58,11 +67,38 @@ export class CoordenadorService {
     return this.coordenadorRepository.save(coordenador);
   }
 
-  async delete(id: number): Promise<void> {
-    const coordenador = await this.findById(id);
-    if (!coordenador) {
-      throw new HttpException('Coordenador não encontrado', HttpStatus.NOT_FOUND);
+  // UC-03 — Classificar Demanda
+  async classificarDemanda(id: number, dto: ClassificarDemandaDto): Promise<Demanda> {
+    const demanda = await this.demandaRepository.findOne({ where: { demIntId: id } });
+    if (!demanda) throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
+
+    demanda.demStrSemestreRecomendado = dto.semestre;
+    demanda.demStrAreaTecnica = dto.areaTecnica;
+    demanda.demStrTipagem = dto.tipagem;
+
+    return this.demandaRepository.save(demanda);
+  }
+
+  // UC-04 — Aprovar Demanda
+  async aprovarDemanda(id: number): Promise<Demanda> {
+    const demanda = await this.demandaRepository.findOne({ where: { demIntId: id } });
+    if (!demanda) throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
+
+    demanda.demBoolAceitacao = true;
+    return this.demandaRepository.save(demanda);
+  }
+
+  // UC-05 — Gerenciar Candidaturas
+  async gerenciarCandidaturas(id: number, dto: GerenciarCandidaturaDto): Promise<Candidatura> {
+    const candidatura = await this.candidaturaRepository.findOne({ where: { canIntId: dto.candidaturaId } });
+    if (!candidatura) throw new HttpException('Candidatura não encontrada', HttpStatus.NOT_FOUND);
+
+    // validação do enum
+    if (!Object.values(StatusCandidatura).includes(dto.status)) {
+      throw new HttpException('Status inválido', HttpStatus.BAD_REQUEST);
     }
-    await this.coordenadorRepository.delete(id);
+
+    candidatura.canStrStatus = dto.status;
+    return this.candidaturaRepository.save(candidatura);
   }
 }
