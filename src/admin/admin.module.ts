@@ -7,6 +7,7 @@ import { Projeto } from '../projeto/entities/projeto.entity';
 
 import { AdminService } from './services/admin.service';
 import { AdminController } from './controllers/admin.controller'; 
+
 @Module({
   imports: [TypeOrmModule.forFeature([Admin, Usuario, Demanda, Projeto])],
   controllers: [AdminController],
