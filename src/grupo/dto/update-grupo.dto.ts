@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateGrupoDto {
@@ -31,6 +31,16 @@ export class UpdateGrupoDto {
   @IsOptional()
   @IsString()
   gruStrMembros?: string;
+
+  @ApiProperty({ example: 'https://github.com/grupo-alpha', description: 'Link do portfólio do grupo', required: false })
+  @IsOptional()
+  @IsString()
+  gruStrPortfolio?: string;
+
+  @ApiProperty({ example: false, description: 'Define se o grupo está ativo (suspensão)', required: false })
+  @IsOptional()
+  @IsBoolean()
+  gruBoolAtivo?: boolean;
 
   @ApiProperty({ example: 12, description: 'Novo ID de usuário vinculado ao grupo', required: false })
   @IsOptional()

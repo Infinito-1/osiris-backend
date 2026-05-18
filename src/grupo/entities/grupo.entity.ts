@@ -12,8 +12,6 @@ import { Usuario } from '../../usuario/entities/usuario.entity';
 import { Candidatura } from '../../candidatura/entities/candidatura.entity';
 import { Semestre } from '../../semestre/entities/semestre.entity';
 
-//adicionar relacionamentos com tab Usuário, semestre, projetos e candidaturas
-
 @Entity({ name: 'grupos' })
 export class Grupo {
   @PrimaryGeneratedColumn({ name: 'gru_int_id' })
@@ -43,8 +41,16 @@ export class Grupo {
   @Column({ name: 'gru_int_tamanho', nullable: false })
   gruIntTamanho!: number;
 
-  @Column({ name: 'gru_str_membros', length: 70 })
-  gruStrMembros!: string;
+  @Column({ name: 'gru_str_membros', length: 200, nullable: true })
+  gruStrMembros?: string;
+
+  // Novo campo: status ativo/inativo (suspensão)
+  @Column({ name: 'gru_bool_ativo', default: true })
+  gruBoolAtivo!: boolean;
+
+  // Novo campo: link de portfólio (deploy, GitHub, etc.)
+  @Column({ name: 'gru_str_portfolio', length: 300, nullable: true })
+  gruStrPortfolio?: string;
 
   @OneToMany(() => Candidatura, (candidatura) => candidatura.grupo)
   candidatura!: Candidatura[];
