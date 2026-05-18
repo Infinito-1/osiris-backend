@@ -1,0 +1,78 @@
+@startuml Osiris_Class_Diagram
+
+skinparam monochrome false
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+
+enum UsuarioTipo {
+  Admin
+  Coordenador
+  Empreendedor
+  Grupo
+}
+
+enum CandidaturaStatus {
+  Pendente
+  Aceita
+  Recusada
+}
+
+class Usuario {
+  + usuIntId: number
+  + usuStrNome: string
+  + usuStrEmail: string
+  + usuStrSenha: string
+  + usuStrTelefone: string
+  + usuStrTipo: UsuarioTipo
+  + usuBoolAtivo: boolean
+}
+
+class Semestre {
+  + semIntId: number
+  + semStrDescricao: string
+}
+
+class TipoDemanda {
+  + tipIntId: number
+  + tipStrNome: string
+}
+
+class Demanda {
+  + demIntId: number
+  + demStrTitulo: string
+  + demBoolAtivo: boolean
+  + demDataCriacao: Date
+  + semIntId: number
+}
+
+class Grupo {
+  + gruIntId: number
+  + semIntId: number
+}
+
+class Candidatura {
+  + canIntId: number
+  + canStrStatus: CandidaturaStatus
+  + gruIntId: number
+  + demIntId: number
+}
+
+class Projeto {
+  + proIntId: number
+  + proStrDescricao: string
+  + proDateInicio: Date
+  + proBoolAtivo: boolean
+  + canIntId: number
+}
+
+' Relacionamentos e Associações
+Semestre "1" -- "0..*" Grupo : vincula >
+Semestre "1" -- "0..*" Demanda : possui >
+TipoDemanda "0..*" -- "0..*" Demanda : categoriza >
+
+Grupo "1" -- "0..*" Candidatura : aplica >
+Demanda "1" -- "0..*" Candidatura : recebe >
+
+Candidatura "1" -- "1" Projeto : transforma-se em >
+
+@enduml
