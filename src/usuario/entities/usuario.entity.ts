@@ -33,4 +33,8 @@ export class Usuario {
   })
   @IsNotEmpty()
   usuStrTipo!: 'Empreendedor' | 'Coordenador' | 'Grupo' | 'Admin';
+
+  //Novo campo para permitir suspensão sem exclusão
+  @Column({ name: 'usu_bool_ativo', default: true })
+  usuBoolAtivo!: boolean;
 }

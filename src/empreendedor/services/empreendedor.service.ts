@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Empreendedor } from '../entities/empreendedor.entity';
@@ -33,7 +33,7 @@ export class EmpreendedorService {
   async create(dto: CreateEmpreendedorDto): Promise<Empreendedor> {
     const empreendedor = this.empreendedorRepository.create({
       ...dto,
-      usuario: { usuIntId: dto.usuIntId } as any, // FK para Usuario
+      usuario: { usuIntId: dto.usuIntId } as any,
     });
     return this.empreendedorRepository.save(empreendedor);
   }
@@ -47,6 +47,15 @@ export class EmpreendedorService {
       empreendedor.usuario = { usuIntId: dto.usuIntId } as any;
     }
 
+    return this.empreendedorRepository.save(empreendedor);
+  }
+
+  //Novo método: suspender login
+  async suspender(id: number): Promise<Empreendedor> {
+    const empreendedor = await this.findById(id);
+    if (!empreendedor) throw new HttpException('Empreendedor não encontrado', HttpStatus.NOT_FOUND);
+
+    empreendedor.usuario.usuBoolAtivo = false;
     return this.empreendedorRepository.save(empreendedor);
   }
 
