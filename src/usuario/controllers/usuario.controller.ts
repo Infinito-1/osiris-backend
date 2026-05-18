@@ -9,51 +9,56 @@ import { UpdateUsuarioDto } from '../dto/update-usuario.dto';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { RolesGuard } from '../../auth/roles.guard';
 import { Roles } from '../../auth/roles.decorator';
-import { ApiTags, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Usuários')
-@Controller('/usuarios')
+@Controller('usuarios')
 export class UsuarioController {
   constructor(private readonly usuarioService: UsuarioService) {}
 
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiResponse({ status: 201, description: 'Cria um novo usuário e devolve rota de destino' })
+  create(@Body() dto: CreateUsuarioDto): Promise<any> {
+    return this.usuarioService.create(dto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Admin')
+  @ApiBearerAuth()
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Lista todos os usuários' })
   findAll(): Promise<Usuario[]> {
     return this.usuarioService.findAll();
   }
 
-  @Get('/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Admin', 'Empreendedor', 'Coordenador', 'Grupo')
+  @ApiBearerAuth()
+  @Get(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Busca usuário pelo ID' })
-  findById(@Param('id', ParseIntPipe) id: number): Promise<Usuario | null> {
+  findById(@Param('id', ParseIntPipe) id: number): Promise<Usuario> {
     return this.usuarioService.findById(id);
   }
 
-  @Post()
-  @HttpCode(HttpStatus.CREATED)
-  @ApiResponse({ status: 201, description: 'Cria um novo usuário' })
-  create(@Body() dto: CreateUsuarioDto): Promise<Usuario> {
-    return this.usuarioService.create(dto);
-  }
-
-  @Put('/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Admin', 'Empreendedor', 'Coordenador', 'Grupo')
+  @ApiBearerAuth()
+  @Put(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Atualiza um usuário existente' })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateUsuarioDto,
-  ): Promise<Usuario | null> {
+  ): Promise<Usuario> {
     return this.usuarioService.update(id, dto);
   }
 
-  // Exclusão só para Admin
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('Admin')
-  @Delete('/:id')
+  @ApiBearerAuth()
+  @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiResponse({ status: 204, description: 'Inativa um usuário (somente Admin)' })
-  delete(@Param('id', ParseIntPipe) id: number) {
+  delete(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.usuarioService.delete(id);
   }
 }

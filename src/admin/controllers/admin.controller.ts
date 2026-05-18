@@ -4,6 +4,8 @@ import {
 } from '@nestjs/common';
 import { AdminService } from '../services/admin.service';
 import { CreateAdminDto } from '../dto/create-admin.dto';
+import { UpdateAdminDto } from '../dto/update-admin.dto';
+import { UpdatePapelDto } from '../dto/update-papel.dto';
 import { UpdateDemandaDto } from '../../demanda/dto/update-demanda.dto';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { RolesGuard } from '../../auth/roles.guard';
@@ -12,32 +14,34 @@ import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('Admin')
 @Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiResponse({ status: 201, description: 'Cria um novo administrador' })
   criarAdmin(@Body() dto: CreateAdminDto) {
-    return this.adminService.criarAdmin(dto.usuarioId);
+    return this.adminService.criarAdmin(dto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
+  @Put(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, description: 'Atualiza propriedades cadastrais do administrador' })
+  updateAdmin(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateAdminDto) {
+    return this.adminService.updateAdmin(id, dto);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiResponse({ status: 204, description: 'Inativa um administrador pelo ID protegendo contra auto-exclusão' })
   removerAdmin(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    // Captura o ID do administrador logado vindo do JwtAuthGuard para validar a Regra de Exceção da UC-21
-    const usuarioLogadoId = req.user?.usuIntId || req.user?.id; 
-    return this.adminService.inativarAdmin(id, usuarioLogadoId);
+    const usuarioLogadoId = req.user?.id || req.user?.usuIntId; 
+    return this.adminService.inativarAdmin(id, Number(usuarioLogadoId));
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
   @Put(':id/reativar')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: 'Reativa um administrador desativado' })
@@ -45,29 +49,30 @@ export class AdminController {
     return this.adminService.reativarAdmin(id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
   @Put('usuario/:id/papel')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Atualiza o papel de um usuário' })
+  @ApiResponse({ status: 200, description: 'Atualiza o papel de um usuário comum' })
   atualizarPapel(
     @Param('id', ParseIntPipe) id: number,
-    @Body('novoPapel') novoPapel: 'Empreendedor' | 'Coordenador' | 'Grupo',
+    @Body() dto: UpdatePapelDto,
   ) {
-    return this.adminService.atualizarPapel(id, novoPapel);
+    return this.adminService.atualizarPapel(id, dto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
   @Delete('usuario/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiResponse({ status: 204, description: 'Inativa um usuário pelo ID (Soft Delete)' })
+  @ApiResponse({ status: 204, description: 'Inativa um usuário padrão pelo ID (Soft Delete)' })
   excluirUsuario(@Param('id', ParseIntPipe) id: number) {
     return this.adminService.inativarUsuario(id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
+  @Put('usuario/:id/reativar')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, description: 'Reativa um usuário comum desativado' })
+  reativarUsuario(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.reativarUsuario(id);
+  }
+
   @Put('demanda/:id')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: 'Gerencia uma demanda existente' })
@@ -75,8 +80,6 @@ export class AdminController {
     return this.adminService.gerenciarDemanda(id, dados);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
   @Put('demanda/:id/moderar')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: 'Modera e oculta uma demanda inadequada através de denúncia (UC-24)' })
@@ -87,8 +90,13 @@ export class AdminController {
     return this.adminService.moderarEOmitirDemanda(id, parecerTecnico);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
+  @Put('demanda/:id/reativar')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, description: 'Restaura a visualização de uma demanda inativada' })
+  reativarDemanda(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.reativarDemanda(id);
+  }
+
   @Delete('projeto/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiResponse({ status: 204, description: 'Inativa um projeto pelo ID (Soft Delete)' })
@@ -96,38 +104,37 @@ export class AdminController {
     return this.adminService.inativarProjeto(id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
+  @Put('projeto/:id/reativar')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, description: 'Restaura a atividade operacional de um projeto' })
+  reativarProjeto(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.reativarProjeto(id);
+  }
+
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Lista todos os administradores' })
+  @ApiResponse({ status: 200, description: 'Lista todos os administradores cadastrados' })
   listarAdmins() {
     return this.adminService.listarAdmins();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
   @Get('estatisticas')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Retorna estatísticas gerais do sistema' })
+  @ApiResponse({ status: 200, description: 'Retorna estatísticas gerais de uso do ecossistema' })
   getEstatisticas() {
     return this.adminService.getEstatisticas();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
   @Get('auditoria')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Lista registros de auditoria global' })
+  @ApiResponse({ status: 200, description: 'Lista registros da trilha de auditoria global' })
   listarAuditoria() {
     return this.adminService.listarAuditoria();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
   @Get('notificacoes')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Lista notificações enviadas' })
+  @ApiResponse({ status: 200, description: 'Lista o histórico de logs de notificações disparadas' })
   listarNotificacoes() {
     return this.adminService.listarNotificacoes();
   }

@@ -5,12 +5,15 @@ import { Admin } from '../entities/admin.entity';
 import { Usuario } from '../../usuario/entities/usuario.entity';
 import { Demanda } from '../../demanda/entities/demanda.entity';
 import { Projeto } from '../../projeto/entities/projeto.entity';
+import { CreateAdminDto } from '../dto/create-admin.dto';
+import { UpdateAdminDto } from '../dto/update-admin.dto';
+import { UpdatePapelDto } from '../dto/update-papel.dto';
 import { UpdateDemandaDto } from '../../demanda/dto/update-demanda.dto';
 
 @Injectable()
 export class AdminService {
   private auditoriaLogs: any[] = [];
-  private notificacoes: any[] = [];
+  private notificationsLogs: any[] = [];
 
   constructor(
     @InjectRepository(Admin)
@@ -23,32 +26,34 @@ export class AdminService {
     private readonly projetoRepository: Repository<Projeto>,
   ) {}
 
-  /**
-   * UC-22: Registro de Logs de Auditoria Global
-   */
   private async registrarAuditoria(acao: string, detalhes: string) {
     const registro = { acao, detalhes, data: new Date().toISOString() };
     this.auditoriaLogs.push(registro);
     console.log(`[AUDITORIA] ${acao} - ${detalhes}`);
   }
 
-  /**
-   * RN-15: Sistema de simulação de alertas automatizados por e-mail
-   */
   private async notificarAlteracao(mensagem: string) {
     const notificacao = { mensagem, data: new Date().toISOString() };
-    this.notificacoes.push(notificacao);
+    this.notificationsLogs.push(notificacao);
     console.log(`[NOTIFICAÇÃO VIA API EMAIL] ${mensagem}`);
   }
 
-  /**
-   * UC-21 / RF-16: Promover um utilizador existente ao papel de Administrador
-   */
-  async criarAdmin(usuarioId: number): Promise<Admin> {
+  async criarAdmin(dto: CreateAdminDto): Promise<Admin> {
+    const { usuarioId } = dto;
+
     const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: usuarioId } });
     if (!usuario) throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
 
+    const adminExistente = await this.adminRepository.findOne({ where: { usuario: { usuIntId: usuarioId } } });
+    if (adminExistente) {
+      if (!adminExistente.admBoolAtivo) {
+        throw new HttpException('Este usuário já possui registro de Admin inativo. Use a rota de reativação.', HttpStatus.BAD_REQUEST);
+      }
+      throw new HttpException('Este usuário já é um administrador ativo', HttpStatus.CONFLICT);
+    }
+
     usuario.usuStrTipo = 'Admin';
+    usuario.usuBoolAtivo = true; 
     await this.usuarioRepository.save(usuario);
 
     const admin = this.adminRepository.create({ usuario, admBoolAtivo: true });
@@ -60,15 +65,50 @@ export class AdminService {
     return novoAdmin;
   }
 
-  /**
-   * UC-21: Inativar Administrador protegendo contra auto-exclusão e travando
-   * a remoção do último administrador ativo da plataforma.
-   */
+  async updateAdmin(id: number, dto: UpdateAdminDto): Promise<Admin> {
+    const admin = await this.adminRepository.findOne({ where: { admIntId: id }, relations: ['usuario'] });
+    if (!admin) throw new HttpException('Admin não encontrado', HttpStatus.NOT_FOUND);
+
+    if (dto.admBolAtivo !== undefined) {
+      admin.admBoolAtivo = dto.admBolAtivo;
+      if (admin.usuario) {
+        admin.usuario.usuBoolAtivo = dto.admBolAtivo;
+        await this.usuarioRepository.save(admin.usuario);
+      }
+    }
+
+    const adminAtualizado = await this.adminRepository.save(admin);
+    await this.registrarAuditoria('Update Admin', `Configurações do Admin ID=${id} atualizadas`);
+    return adminAtualizado;
+  }
+
+  async atualizarPapel(usuarioId: number, dto: UpdatePapelDto): Promise<Usuario> {
+    const { novoPapel } = dto;
+
+    const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: usuarioId } });
+    if (!usuario) throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
+
+    if (usuario.usuStrTipo === 'Admin') {
+      const adminReg = await this.adminRepository.findOne({ where: { usuario: { usuIntId: usuarioId } } });
+      if (adminReg) {
+        await this.adminRepository.delete(adminReg.admIntId);
+      }
+    }
+
+    usuario.usuStrTipo = novoPapel;
+    const atualizado = await this.usuarioRepository.save(usuario);
+
+    await this.registrarAuditoria('Atualizar Papel', `Usuário ID=${usuarioId} alterado para papel: ${novoPapel}`);
+    await this.notificarAlteracao(`O perfil do usuário ${usuario.usuStrEmail} foi modificado para ${novoPapel}.`);
+
+    return atualizado;
+  }
+
   async inativarAdmin(id: number, usuarioLogadoId: number): Promise<void> {
     const admin = await this.adminRepository.findOne({ where: { admIntId: id }, relations: ['usuario'] });
     if (!admin) throw new HttpException('Admin não encontrado', HttpStatus.NOT_FOUND);
 
-    if (admin.usuario.usuIntId === usuarioLogadoId) {
+    if (admin.usuario && admin.usuario.usuIntId === usuarioLogadoId) {
       throw new HttpException('Não é permitido inativar a sua própria conta de administrador', HttpStatus.FORBIDDEN);
     }
 
@@ -80,16 +120,17 @@ export class AdminService {
     admin.admBoolAtivo = false;
     await this.adminRepository.save(admin);
 
-    admin.usuario.usuBoolAtivo = false;
-    await this.usuarioRepository.save(admin.usuario);
+    if (admin.usuario) {
+      admin.usuario.usuBoolAtivo = false;
+      await this.usuarioRepository.save(admin.usuario);
+    }
 
     await this.registrarAuditoria('Inativar Admin', `Admin ID=${id} e seu utilizador base foram inativados`);
-    await this.notificarAlteracao(`Administrador ${admin.usuario.usuStrEmail} foi inativado.`);
+    if (admin.usuario) {
+      await this.notificarAlteracao(`Administrador ${admin.usuario.usuStrEmail} foi inativado.`);
+    }
   }
 
-  /**
-   * UC-21: Reativação de uma credencial de Administrador inativada
-   */
   async reativarAdmin(id: number): Promise<Admin> {
     const admin = await this.adminRepository.findOne({ where: { admIntId: id }, relations: ['usuario'] });
     if (!admin) throw new HttpException('Admin não encontrado', HttpStatus.NOT_FOUND);
@@ -97,40 +138,26 @@ export class AdminService {
     admin.admBoolAtivo = true;
     await this.adminRepository.save(admin);
 
-    admin.usuario.usuBoolAtivo = true;
-    await this.usuarioRepository.save(admin.usuario);
+    if (admin.usuario) {
+      admin.usuario.usuBoolAtivo = true;
+      admin.usuario.usuStrTipo = 'Admin'; 
+      await this.usuarioRepository.save(admin.usuario);
+    }
 
     await this.registrarAuditoria('Reativar Admin', `Admin ID=${id} reativado com sucesso`);
-    await this.notificarAlteracao(`Administrador ${admin.usuario.usuStrEmail} foi reativado.`);
+    if (admin.usuario) {
+      await this.notificarAlteracao(`Administrador ${admin.usuario.usuStrEmail} foi reativado.`);
+    }
 
     return admin;
   }
 
-  /**
-   * RF-18 / UC-21: Atualizar o tipo de papel e permissões de um Utilizador cadastrado
-   */
-  async atualizarPapel(usuarioId: number, novoPapel: 'Empreendedor' | 'Coordenador' | 'Grupo'): Promise<Usuario> {
-    const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: usuarioId } });
-    if (!usuario) throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
-
-    usuario.usuStrTipo = novoPapel;
-    const atualizado = await this.usuarioRepository.save(usuario);
-
-    await this.registrarAuditoria('Atualizar Papel', `Usuário ID=${usuarioId} alterado para papel: ${novoPapel}`);
-    await this.notificarAlteracao(`O perfil do usuário ${usuario.usuStrEmail} foi modificado para ${novoPapel}.`);
-
-    return atualizado;
-  }
-
-  /**
-   * UC-21 / RF-16: Inativar conta de utilizador padrão (Soft Delete)
-   */
   async inativarUsuario(id: number): Promise<void> {
     const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: id } });
     if (!usuario) throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
 
     if (usuario.usuStrTipo === 'Admin') {
-      throw new HttpException('Não é permitido inativar administradores através desta rota padrão', HttpStatus.FORBIDDEN);
+      throw new HttpException('Não é permitido inativar administradores através desta rota padrão de usuários', HttpStatus.FORBIDDEN);
     }
 
     usuario.usuBoolAtivo = false;
@@ -140,9 +167,6 @@ export class AdminService {
     await this.notificarAlteracao(`O utilizador ${usuario.usuStrEmail} foi desativado da plataforma.`);
   }
 
-  /**
-   * UC-21 / RF-16: Restaurar e reativar a conta de um utilizador padrão
-   */
   async reativarUsuario(id: number): Promise<Usuario> {
     const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: id } });
     if (!usuario) throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
@@ -156,9 +180,6 @@ export class AdminService {
     return usuario;
   }
 
-  /**
-   * RF-17: Edição administrativa global de dados de uma demanda
-   */
   async gerenciarDemanda(id: number, dados: UpdateDemandaDto): Promise<Demanda> {
     const demanda = await this.demandaRepository.findOne({ where: { demIntId: id } });
     if (!demanda) throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
@@ -166,21 +187,15 @@ export class AdminService {
     Object.assign(demanda, dados);
     const demandaAtualizada = await this.demandaRepository.save(demanda);
 
-    await this.registrarAuditoria('Gerenciar Demanda', `Demanda ID=${id} atualizada administrativamente`);
+    await this.registrarAuditoria('Gerenciar Demanda', `Demanda ID=${id} updated administratively`);
     await this.notificarAlteracao(`A demanda ID ${id} sofreu alterações de dados por um administrador.`);
 
     return demandaAtualizada;
   }
 
-  /**
-   * UC-24: Fluxo de Moderação de Conteúdo e Denúncias para Conteúdos Inadequados
-   */
   async moderarEOmitirDemanda(id: number, parecerTecnico: string): Promise<Demanda> {
     if (!parecerTecnico || parecerTecnico.trim().length === 0) {
-      throw new HttpException(
-        'Moderação bloqueada: É obrigatório o preenchimento do parecer técnico justificando a ação', 
-        HttpStatus.BAD_REQUEST
-      );
+      throw new HttpException('Moderação bloqueada: É obrigatório o preenchimento do parecer técnico justificando a ação', HttpStatus.BAD_REQUEST);
     }
 
     const demanda = await this.demandaRepository.findOne({ where: { demIntId: id } });
@@ -195,14 +210,10 @@ export class AdminService {
     return demandaModerada;
   }
 
-  /**
-   * RF-17: Inativar a visualização e andamento de um Projeto Acadêmico (Soft Delete)
-   */
   async inativarProjeto(id: number): Promise<void> {
     const projeto = await this.projetoRepository.findOne({ where: { proIntId: id } });
     if (!projeto) throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
 
-    // Ajustado de proBoolAtivo baseado na coluna injetada na entidade Projeto
     projeto.proBoolAtivo = false;
     await this.projetoRepository.save(projeto);
 
@@ -210,9 +221,6 @@ export class AdminService {
     await this.notificarAlteracao(`O projeto acadêmico ID ${id} foi inativado.`);
   }
 
-  /**
-   * RF-17: Reativar uma demanda inativada de volta à galeria pública
-   */
   async reativarDemanda(id: number): Promise<Demanda> {
     const demanda = await this.demandaRepository.findOne({ where: { demIntId: id } });
     if (!demanda) throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
@@ -226,9 +234,6 @@ export class AdminService {
     return demanda;
   }
 
-  /**
-   * RF-17: Reativar um projeto inativado de volta ao status operacional
-   */
   async reativarProjeto(id: number): Promise<Projeto> {
     const projeto = await this.projetoRepository.findOne({ where: { proIntId: id } });
     if (!projeto) throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
@@ -252,13 +257,9 @@ export class AdminService {
   }
 
   async listarNotificacoes(): Promise<any[]> {
-    return this.notificacoes;
+    return this.notificationsLogs;
   }
 
-  /**
-   * RF-15 / UC-22: Emissão e consulta de dados estatísticos e analíticos
-   * Corrigido o nome do método tirando o acento gráfico solicitado pelo compilador.
-   */
   async getEstatisticas(): Promise<any> {
     const totalUsuarios = await this.usuarioRepository.count();
     const totalDemandas = await this.demandaRepository.count();

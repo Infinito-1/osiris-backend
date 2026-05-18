@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { HistoricoProjeto } from '../entities/historico_projeto.entity';
 import { CreateHistoricoProjetoDto } from '../dto/create-historico-projeto.dto';
 import { UpdateHistoricoProjetoDto } from '../dto/update-historico-projeto.dto';
@@ -9,46 +9,54 @@ import { UpdateHistoricoProjetoDto } from '../dto/update-historico-projeto.dto';
 export class HistoricoProjetoService {
   constructor(
     @InjectRepository(HistoricoProjeto)
-    private historicoProjetoRepository: Repository<HistoricoProjeto>,
+    private readonly historicoProjetoRepository: Repository<HistoricoProjeto>,
   ) {}
 
   async findAll(): Promise<HistoricoProjeto[]> {
     return this.historicoProjetoRepository.find({ relations: ['projeto'] });
   }
 
-  async findById(id: number): Promise<HistoricoProjeto | null> {
-    return this.historicoProjetoRepository.findOne({
+  async findById(id: number): Promise<HistoricoProjeto> {
+    const historico = await this.historicoProjetoRepository.findOne({
       where: { hspIntId: id },
       relations: ['projeto'],
     });
+    if (!historico) {
+      throw new HttpException('Registro de histórico não encontrado', HttpStatus.NOT_FOUND);
+    }
+    return historico;
   }
 
   async findByhspStrDesc(hspStrDesc: string): Promise<HistoricoProjeto[]> {
     return this.historicoProjetoRepository.find({
-      where: { hspStrDesc },
+      where: { hspStrDesc: ILike(`%${hspStrDesc}%`) },
       relations: ['projeto'],
     });
   }
 
   async create(dto: CreateHistoricoProjetoDto): Promise<HistoricoProjeto> {
     const historico = this.historicoProjetoRepository.create({
-      ...dto,
+      hspStrDesc: dto.hspStrDesc,
+      hspStrLinkProjeto: dto.hspStrLinkProjeto,
+      hspStrStatus: dto.hspStrStatus,
       projeto: { proIntId: dto.proIntId } as any,
     });
     return this.historicoProjetoRepository.save(historico);
   }
 
-  async update(id: number, dto: UpdateHistoricoProjetoDto): Promise<HistoricoProjeto | null> {
+  async update(id: number, dto: UpdateHistoricoProjetoDto): Promise<HistoricoProjeto> {
     const historico = await this.findById(id);
-    if (!historico) return null;
 
-    Object.assign(historico, dto);
+    if (dto.hspStrDesc) historico.hspStrDesc = dto.hspStrDesc;
+    if (dto.hspStrLinkProjeto) historico.hspStrLinkProjeto = dto.hspStrLinkProjeto;
+    if (dto.hspStrStatus) historico.hspStrStatus = dto.hspStrStatus;
     if (dto.proIntId) historico.projeto = { proIntId: dto.proIntId } as any;
 
     return this.historicoProjetoRepository.save(historico);
   }
 
-  async delete(id: number) {
-    return this.historicoProjetoRepository.delete(id);
+  async delete(id: number): Promise<void> {
+    await this.findById(id);
+    await this.historicoProjetoRepository.delete(id);
   }
 }

@@ -29,7 +29,6 @@ export class Usuario {
   @IsNotEmpty()
   usuStrTipo!: 'Empreendedor' | 'Coordenador' | 'Grupo' | 'Admin';
 
-  // campo para suspensão
   @Column({ name: 'usu_bool_ativo', default: true })
   usuBoolAtivo!: boolean;
 }

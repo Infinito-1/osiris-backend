@@ -1,37 +1,31 @@
 import { DataSource } from 'typeorm';
+import { config } from 'dotenv';
 
-import { Usuario } from '../usuario/entities/usuario.entity';
-import { Admin } from '../admin/entities/admin.entity';
-import { Coordenador } from '../coordenador/entities/coordenador.entity';
-import { Demanda } from '../demanda/entities/demanda.entity';
-import { Candidatura } from '../candidatura/entities/candidatura.entity';
-import { Empreendedor } from '../empreendedor/entities/empreendedor.entity';
-import { Grupo } from '../grupo/entities/grupo.entity';
-import { HistoricoProjeto } from '../historico_projeto/entities/historico_projeto.entity';
-import { Projeto } from '../projeto/entities/projeto.entity';
-import { Semestre } from '../semestre/entities/semestre.entity';
-import { TipoDemanda } from '../tipo_demanda/entities/tipo_demanda.entity';
+config();
 
-export const AppDataSource = new DataSource({
-  type: 'postgres',
-  host: 'localhost',
-  port: 5432,
-  username: 'postgres',
-  password: 'root',
-  database: 'db_osiris',
-  entities: [
-    Usuario,
-    Admin,
-    Coordenador,
-    Demanda,
-    Candidatura,
-    Empreendedor,
-    Grupo,
-    HistoricoProjeto,
-    Projeto,
-    Semestre,
-    TipoDemanda,
-  ],
-  migrations: [__dirname + '/../migrations/*{.ts,.js}'],
-  synchronize: false,
-});
+const isProduction = process.env.NODE_ENV === 'production';
+
+export const AppDataSource = new DataSource(
+  isProduction
+    ? {
+        type: 'postgres',
+        url: process.env.DATABASE_URL,
+        logging: false,
+        synchronize: false,
+        ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
+        entities: [__dirname + '/../**/*.entity.js'],
+        migrations: [__dirname + '/../migrations/**/*.js'],
+      }
+    : {
+        type: 'postgres',
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.DB_PORT || '5432', 10),
+        username: process.env.DB_USERNAME || 'postgres',
+        password: process.env.DB_PASSWORD || 'root',
+        database: process.env.DB_DATABASE || 'db_osiris',
+        logging: true,
+        synchronize: false,
+        entities: [__dirname + '/../**/*.entity.{ts,js}'],
+        migrations: [__dirname + '/../migrations/**/*.{ts,js}'],
+      }
+);

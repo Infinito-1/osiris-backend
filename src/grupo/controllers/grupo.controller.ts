@@ -10,7 +10,7 @@ import { RolesGuard } from '../../auth/roles.guard';
 import { Roles } from '../../auth/roles.decorator';
 import { CreateGrupoDto } from '../dto/create-grupo.dto';
 import { UpdateGrupoDto } from '../dto/update-grupo.dto';
-import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Grupos')
 @Controller('grupos')
@@ -47,7 +47,8 @@ export class GrupoController {
   @Get('dashboard')
   @HttpCode(HttpStatus.OK)
   getDashboard(@Request() req): Promise<any> {
-    return this.grupoService.getDashboardDados(req.user.userId);
+    const usuarioId = req.user.id || req.user.usuIntId;
+    return this.grupoService.getDashboardDados(usuarioId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -56,7 +57,8 @@ export class GrupoController {
   @Get('perfil')
   @HttpCode(HttpStatus.OK)
   getPerfil(@Request() req): Promise<Grupo> {
-    return this.grupoService.findByUsuarioId(req.user.userId);
+    const usuarioId = req.user.id || req.user.usuIntId;
+    return this.grupoService.findByUsuarioId(usuarioId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -80,7 +82,8 @@ export class GrupoController {
     @Param('demIntId', ParseIntPipe) demIntId: number,
     @Request() req
   ): Promise<Candidatura> {
-    return this.grupoService.seCandidatar(demIntId, req.user.userId);
+    const usuarioId = req.user.id || req.user.usuIntId;
+    return this.grupoService.seCandidatar(demIntId, usuarioId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -92,7 +95,8 @@ export class GrupoController {
     @Param('canIntId', ParseIntPipe) canIntId: number,
     @Request() req
   ): Promise<void> {
-    return this.grupoService.desistirCandidatura(canIntId, req.user.userId);
+    const usuarioId = req.user.id || req.user.usuIntId;
+    return this.grupoService.desistirCandidatura(canIntId, usuarioId);
   }
 
   @UseGuards(JwtAuthGuard)

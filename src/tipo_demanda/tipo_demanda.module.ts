@@ -1,6 +1,6 @@
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { TipoDemanda } from './entities/tipo_demanda.entity';
 import { Module } from '@nestjs/common';
+import { TipoDemanda } from './entities/tipo_demanda.entity';
 import { TipoDemandaService } from './services/tipo_demanda.services';
 import { TipoDemandaController } from './controllers/tipo_demanda.controller';
 
@@ -8,6 +8,6 @@ import { TipoDemandaController } from './controllers/tipo_demanda.controller';
   imports: [TypeOrmModule.forFeature([TipoDemanda])],
   providers: [TipoDemandaService],
   controllers: [TipoDemandaController],
-  exports: [TipoDemandaService], // 🔧 exporta o service para outros módulos
+  exports: [TipoDemandaService], 
 })
 export class TipoDemandaModule {}

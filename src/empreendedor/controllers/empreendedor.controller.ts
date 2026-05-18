@@ -10,7 +10,7 @@ import { RolesGuard } from '../../auth/roles.guard';
 import { Roles } from '../../auth/roles.decorator';
 import { CreateEmpreendedorDto } from '../dto/create-empreendedor.dto';
 import { UpdateEmpreendedorDto } from '../dto/update-empreendedor.dto';
-import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Empreendedores')
 @Controller('empreendedores')
@@ -41,7 +41,8 @@ export class EmpreendedorController {
   @Get('dashboard')
   @HttpCode(HttpStatus.OK)
   getDashboard(@Request() req): Promise<any> {
-    return this.empreendedorService.getDashboardDados(req.user.userId);
+    const usuarioId = req.user.id || req.user.usuIntId;
+    return this.empreendedorService.getDashboardDados(usuarioId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -50,7 +51,8 @@ export class EmpreendedorController {
   @Get('perfil')
   @HttpCode(HttpStatus.OK)
   getPerfil(@Request() req): Promise<Empreendedor> {
-    return this.empreendedorService.findByUsuarioId(req.user.userId);
+    const usuarioId = req.user.id || req.user.usuIntId;
+    return this.empreendedorService.findByUsuarioId(usuarioId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -74,7 +76,8 @@ export class EmpreendedorController {
     @Param('demIntId', ParseIntPipe) demIntId: number,
     @Request() req
   ): Promise<Demanda> {
-    return this.empreendedorService.reativarDemanda(demIntId, req.user.userId);
+    const usuarioId = req.user.id || req.user.usuIntId;
+    return this.empreendedorService.reativarDemanda(demIntId, usuarioId);
   }
 
   @UseGuards(JwtAuthGuard)

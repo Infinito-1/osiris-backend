@@ -9,12 +9,10 @@ export class ProdService implements TypeOrmOptionsFactory {
       url: process.env.DATABASE_URL,
       logging: false,
       dropSchema: false,
-      ssl: {
-        rejectUnauthorized: false,
-      },
+      ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
       synchronize: false,
       autoLoadEntities: true,
-      migrations: [__dirname + '/../migrations/*{.ts,.js}'],
+      migrations: [__dirname + '/../migrations/**/*.js'],
     };
   }
 }

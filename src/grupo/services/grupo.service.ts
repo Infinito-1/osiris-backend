@@ -7,6 +7,7 @@ import { Demanda } from '../../demanda/entities/demanda.entity';
 import { Candidatura } from '../../candidatura/entities/candidatura.entity';
 import { CreateGrupoDto } from '../dto/create-grupo.dto';
 import { UpdateGrupoDto } from '../dto/update-grupo.dto';
+import { StatusCandidatura } from '../../candidatura/dto/status.enum';
 
 @Injectable()
 export class GrupoService {
@@ -22,16 +23,13 @@ export class GrupoService {
   ) {}
 
   async findAll(): Promise<Grupo[]> {
-    return this.grupoRepository.find({
-      where: { gruBoolAtivo: true },
-      relations: ['semestre'],
-    });
+    return this.grupoRepository.find({ relations: ['usuario', 'semestre'] });
   }
 
   async findById(id: number): Promise<Grupo> {
-    const grupo = await this.grupoRepository.findOne({
-      where: { gruIntId: id },
-      relations: ['usuario', 'semestre'],
+    const grupo = await this.grupoRepository.findOne({ 
+      where: { gruIntId: id }, 
+      relations: ['usuario', 'semestre'] 
     });
     if (!grupo) {
       throw new HttpException('Grupo não encontrado', HttpStatus.NOT_FOUND);
@@ -45,15 +43,15 @@ export class GrupoService {
       relations: ['usuario', 'semestre'],
     });
     if (!grupo) {
-      throw new HttpException('Perfil de grupo não encontrado para este usuário.', HttpStatus.NOT_FOUND);
+      throw new HttpException('Perfil de grupo não encontrado para este utilizador.', HttpStatus.NOT_FOUND);
     }
     return grupo;
   }
 
-  async findByName(nome: string): Promise<Grupo[]> {
+  async findByName(name: string): Promise<Grupo[]> {
     return this.grupoRepository.find({
-      where: { gruStrNome: ILike(`%${nome}%`), gruBoolAtivo: true },
-      relations: ['semestre'],
+      where: { gruStrNome: ILike(`%${name}%`) },
+      relations: ['usuario', 'semestre']
     });
   }
 
@@ -69,7 +67,7 @@ export class GrupoService {
     const grupo = this.grupoRepository.create({
       gruStrNome: dto.gruStrNome,
       gruStrDescricao: dto.gruStrDescricao,
-      gruIntLider: dto.gruIntLider,
+      gruIntLider: dto.gruStrLider,
       gruChaRa: dto.gruChaRa,
       gruIntTamanho: dto.gruIntTamanho,
       gruStrMembros: dto.gruStrMembros,
@@ -82,10 +80,6 @@ export class GrupoService {
   async update(id: number, dto: UpdateGrupoDto): Promise<Grupo> {
     const grupo = await this.findById(id);
 
-    if (dto.gruStrPortfolio && !dto.gruStrPortfolio.startsWith('http')) {
-      throw new HttpException('Portfólio deve ser um link válido', HttpStatus.BAD_REQUEST);
-    }
-
     if (dto.gruStrNome) grupo.gruStrNome = dto.gruStrNome;
     if (dto.gruStrDescricao) grupo.gruStrDescricao = dto.gruStrDescricao;
     if (dto.gruIntLider) grupo.gruIntLider = dto.gruIntLider;
@@ -96,7 +90,9 @@ export class GrupoService {
 
     if (dto.usuIntId) {
       const novoUsuario = await this.usuarioRepository.findOne({ where: { usuIntId: dto.usuIntId } });
-      if (!novoUsuario) throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
+      if (!novoUsuario) {
+        throw new HttpException('Novo usuário de associação não encontrado', HttpStatus.NOT_FOUND);
+      }
       grupo.usuario = novoUsuario;
     }
 
@@ -105,49 +101,52 @@ export class GrupoService {
 
   async suspender(id: number): Promise<Grupo> {
     const grupo = await this.findById(id);
-    grupo.gruBoolAtivo = false;
     if (grupo.usuario) {
       grupo.usuario.usuBoolAtivo = false;
       await this.usuarioRepository.save(grupo.usuario);
     }
+    grupo.gruBoolAtivo = false;
     return this.grupoRepository.save(grupo);
   }
 
   async delete(id: number): Promise<void> {
-    await this.findById(id);
-    await this.grupoRepository.delete(id);
+    const grupo = await this.findById(id);
+    await this.grupoRepository.remove(grupo);
   }
 
   async seCandidatar(demIntId: number, usuarioId: number): Promise<Candidatura> {
     const grupo = await this.findByUsuarioId(usuarioId);
-    const demanda = await this.demandaRepository.findOne({ where: { demIntId } });
+    
+    const demanda = await this.demandaRepository.findOne({ 
+      where: { demIntId, demBoolAtivo: true, demBoolAceitacao: true },
+      relations: ['coordenador']
+    });
 
     if (!demanda) {
-      throw new HttpException('Demanda informada não encontrada', HttpStatus.NOT_FOUND);
+      throw new HttpException('Demanda não está disponível para candidaturas', HttpStatus.NOT_FOUND);
     }
 
-    const jaCandidatado = await this.candidaturaRepository.findOne({
-      where: { 
-        grupo: { gruIntId: grupo.gruIntId }, 
-        demanda: { demIntId } 
-      }
+    const candidaturaExistente = await this.candidaturaRepository.findOne({
+      where: { grupo: { gruIntId: grupo.gruIntId }, demanda: { demIntId } }
     });
 
-    if (jaCandidatado) {
-      throw new HttpException('O grupo já se candidatou a esta demanda', HttpStatus.BAD_REQUEST);
+    if (candidaturaExistente) {
+      throw new HttpException('Esse grupo já possui uma candidatura ativa para esta demanda', HttpStatus.BAD_REQUEST);
     }
 
-    const candidatura = this.candidaturaRepository.create({
+    const novaCandidatura = this.candidaturaRepository.create({
       grupo: grupo,
       demanda: demanda,
-      canStrStatus: 'Pendente' as any
+      coordenador: demanda.coordenador,
+      canStrStatus: StatusCandidatura.Pendente
     });
 
-    return this.candidaturaRepository.save(candidatura);
+    return this.candidaturaRepository.save(novaCandidatura);
   }
 
   async desistirCandidatura(canIntId: number, usuarioId: number): Promise<void> {
     const grupo = await this.findByUsuarioId(usuarioId);
+    
     const candidatura = await this.candidaturaRepository.findOne({
       where: { canIntId, grupo: { gruIntId: grupo.gruIntId } }
     });
@@ -162,25 +161,21 @@ export class GrupoService {
   async getDashboardDados(usuarioId: number): Promise<any> {
     const grupo = await this.findByUsuarioId(usuarioId);
 
-    const totalCandidaturas = await this.candidaturaRepository.count({
+    const candidaturasEnviadas = await this.candidaturaRepository.count({
       where: { grupo: { gruIntId: grupo.gruIntId } }
     });
 
     const candidaturasAprovadas = await this.candidaturaRepository.count({
-      where: { 
-        grupo: { gruIntId: grupo.gruIntId }, 
-        canStrStatus: 'Aceita' as any 
-      }
+      where: { grupo: { gruIntId: grupo.gruIntId }, canStrStatus: StatusCandidatura.Aceita || 'Aceita' as any }
     });
 
     return {
-      modulo: 'Painel Estudantil - Osiris',
+      modulo: 'Painel Acadêmico do Aluno - Osiris',
       grupo: grupo.gruStrNome,
       lider: grupo.gruIntLider,
-      portfolio: grupo.gruStrPortfolio || 'Nenhum link cadastrado',
       metricas: {
-        totalCandidaturasEnviadas: totalCandidaturas,
-        projetosAprovadosPelaEmpresa: candidaturasAprovadas
+        totalCandidaturasEnviadas: candidaturasEnviadas,
+        projetosAprovadosPeloEmpreendedor: candidaturasAprovadas
       },
       timestamp: new Date().toISOString()
     };

@@ -1,4 +1,3 @@
-// src/projeto/entities/projeto.entity.ts ou onde estiver sua entidade Projeto
 import {
   Column,
   Entity,

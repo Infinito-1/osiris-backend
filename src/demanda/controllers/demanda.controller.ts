@@ -15,12 +15,10 @@ import {
 import { DemandaService } from '../services/demanda.service';
 import { Demanda } from '../entities/demanda.entity';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
-import { RolesGuard } from '../../auth/roles.guard'; // 🔧 precisa de um guard de roles
-import { Roles } from '../../auth/roles.decorator'; // 🔧 decorator para roles
+import { RolesGuard } from '../../auth/roles.guard'; 
+import { Roles } from '../../auth/roles.decorator'; 
 import { CreateDemandaDto } from '../dto/create-demanda.dto';
 import { UpdateDemandaDto } from '../dto/update-demanda.dto';
-
-// Swagger decorators
 import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Demandas')
@@ -28,7 +26,6 @@ import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 export class DemandaController {
   constructor(private readonly demandaService: DemandaService) {}
 
-  // 📌 VISUALIZAÇÃO (aberto para todos, inclusive não logados)
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: 'Lista todas as demandas' })
@@ -59,9 +56,8 @@ export class DemandaController {
     return this.demandaService.findByNome(nome);
   }
 
-  // 📌 CRIAÇÃO (coordenador, empreendedor e admin)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('coordenador', 'empreendedor', 'admin')
+  @Roles('Coordenador', 'Empreendedor', 'Admin')
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
@@ -70,9 +66,8 @@ export class DemandaController {
     return this.demandaService.create(dto);
   }
 
-  // 📌 ATUALIZAÇÃO (coordenador, empreendedor e admin)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('coordenador', 'empreendedor', 'admin')
+  @Roles('Coordenador', 'Empreendedor', 'Admin')
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
@@ -84,9 +79,8 @@ export class DemandaController {
     return this.demandaService.update(id, dto);
   }
 
-  // 📌 DESATIVAR (coordenador, empreendedor e admin)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('coordenador', 'empreendedor', 'admin')
+  @Roles('Coordenador', 'Empreendedor', 'Admin')
   @Put('desativar/:id')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
@@ -95,9 +89,8 @@ export class DemandaController {
     return this.demandaService.desativar(id);
   }
 
-  // 📌 DELETAR (somente admin)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles('Admin')
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth()

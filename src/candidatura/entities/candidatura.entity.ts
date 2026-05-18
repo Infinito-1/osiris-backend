@@ -10,16 +10,16 @@ export class Candidatura {
   @PrimaryGeneratedColumn({ name: 'can_int_id' })
   canIntId!: number;
 
-  @Column({ name: 'can_str_status', type: 'enum', enum: StatusCandidatura })
+  @Column({ name: 'can_str_status', type: 'enum', enum: StatusCandidatura, default: StatusCandidatura.Pendente })
   canStrStatus!: StatusCandidatura;
 
   @IsBoolean()
   @Column({ name: 'can_bool_aprovacao', default: false })
   canBoolAprovacao!: boolean;
 
-  @ManyToOne(() => Coordenador, (coordenador) => coordenador.candidatura)
+  @ManyToOne(() => Coordenador, (coordenador) => coordenador.candidatura, { nullable: true })
   @JoinColumn({ name: 'coo_int_id' })
-  coordenador!: Coordenador;
+  coordenador?: Coordenador;
 
   @ManyToOne(() => Demanda, (demanda) => demanda.candidatura)
   @JoinColumn({ name: 'dem_int_id' })

@@ -17,7 +17,7 @@ export class Grupo {
   @PrimaryGeneratedColumn({ name: 'gru_int_id' })
   gruIntId!: number;
 
-  @OneToOne(() => Usuario)
+  @OneToOne(() => Usuario, { eager: true })
   @JoinColumn({ name: 'usu_int_id' })
   usuario!: Usuario;
 

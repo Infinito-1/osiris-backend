@@ -37,14 +37,14 @@ export class EmpreendedorService {
   }
 
   async findByUsuarioId(usuarioId: number): Promise<Empreendedor> {
-    const empreendedor = await this.empreendedorRepository.findOne({
+    const AgraEmpreendedor = await this.empreendedorRepository.findOne({
       where: { usuario: { usuIntId: usuarioId } },
       relations: ['usuario'],
     });
-    if (!empreendedor) {
+    if (!AgraEmpreendedor) {
       throw new HttpException('Perfil de empreendedor não encontrado para este utilizador.', HttpStatus.NOT_FOUND);
     }
-    return empreendedor;
+    return AgraEmpreendedor;
   }
 
   async create(dto: CreateEmpreendedorDto): Promise<Empreendedor> {
@@ -72,7 +72,10 @@ export class EmpreendedorService {
     if (dto.empChaCnpj) empreendedor.empChaCnpj = dto.empChaCnpj;
 
     if (dto.usuIntId) {
-      const novoUsuario = await this.usuarioRepository.save({ usuIntId: dto.usuIntId } as any);
+      const novoUsuario = await this.usuarioRepository.findOne({ where: { usuIntId: dto.usuIntId } });
+      if (!novoUsuario) {
+        throw new HttpException('Novo usuário de associação não encontrado', HttpStatus.NOT_FOUND);
+      }
       empreendedor.usuario = novoUsuario;
     }
 
@@ -113,7 +116,7 @@ export class EmpreendedorService {
       throw new HttpException('Demanda não encontrada ou não pertence a este empreendedor', HttpStatus.NOT_FOUND);
     }
 
-    demanda.demBoolAtivo = false;     
+    demanda.demBoolAtivo = true;     
     demanda.demBoolAceitacao = false; 
 
     return this.demandaRepository.save(demanda);

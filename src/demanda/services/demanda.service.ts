@@ -21,9 +21,6 @@ export class DemandaService {
     });
   }
 
-  /**
-   * findById padrão utilizado pela Galeria Pública (Apenas ativas e aceitas)
-   */
   async findById(id: number): Promise<Demanda | null> {
     return this.demandaRepository.findOne({
       where: { demIntId: id, demBoolAtivo: true, demBoolAceitacao: true },
@@ -31,10 +28,6 @@ export class DemandaService {
     });
   }
 
-  /**
-   * Método interno para fluxos de negócio da Coordenação e Admin 
-   * Busca a demanda ignorando se ela já foi aceita ou ativada na galeria.
-   */
   async findOneInternal(id: number): Promise<Demanda> {
     const demanda = await this.demandaRepository.findOne({
       where: { demIntId: id },
@@ -64,14 +57,14 @@ export class DemandaService {
   async create(dto: CreateDemandaDto): Promise<Demanda> {
     const tipos: TipoDemanda[] = [];
 
-    if (dto.tipIntIds) {
+    if (dto.tipIntIds && dto.tipIntIds.length > 0) {
       for (const id of dto.tipIntIds) {
         const tipo = await this.tipoDemandaService.findById(id);
         if (tipo) tipos.push(tipo);
       }
     }
 
-    if (dto.tipStrNomes) {
+    if (dto.tipStrNomes && dto.tipStrNomes.length > 0) {
       for (const nome of dto.tipStrNomes) {
         const tipo = await this.tipoDemandaService.findOrCreate(nome);
         tipos.push(tipo);
@@ -104,13 +97,13 @@ export class DemandaService {
     if (dto.cooIntId) demanda.coordenador = { cooIntId: dto.cooIntId } as any;
 
     const tipos: TipoDemanda[] = [];
-    if (dto.tipIntIds) {
+    if (dto.tipIntIds && dto.tipIntIds.length > 0) {
       for (const id of dto.tipIntIds) {
         const tipo = await this.tipoDemandaService.findById(id);
         if (tipo) tipos.push(tipo);
       }
     }
-    if (dto.tipStrNomes) {
+    if (dto.tipStrNomes && dto.tipStrNomes.length > 0) {
       for (const nome of dto.tipStrNomes) {
         const tipo = await this.tipoDemandaService.findOrCreate(nome);
         tipos.push(tipo);

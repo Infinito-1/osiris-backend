@@ -1,14 +1,13 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Semestre } from '../entities/semestre.entity';
 import { In, Repository } from 'typeorm';
+import { Semestre } from '../entities/semestre.entity';
 
-//atualizar após ativar os relacionamentos
 @Injectable()
 export class SemestreService implements OnApplicationBootstrap {
   constructor(
     @InjectRepository(Semestre)
-    private semestreRepository: Repository<Semestre>,
+    private readonly semestreRepository: Repository<Semestre>,
   ) {}
 
   async onApplicationBootstrap() {
@@ -30,39 +29,40 @@ export class SemestreService implements OnApplicationBootstrap {
   }
 
   async findAll(): Promise<Semestre[]> {
-    return await this.semestreRepository.find();
+    return this.semestreRepository.find();
   }
 
-  async findById(id: number): Promise<Semestre | null> {
-    return await this.semestreRepository.findOne({
-      where: {
-        semIntId: id,
-      },
-      relations: {
-        grupo: true,
-      },
+  async findById(id: number): Promise<Semestre> {
+    const semestre = await this.semestreRepository.findOne({
+      where: { semIntId: id },
+      relations: { grupo: true },
     });
+
+    if (!semestre) {
+      throw new HttpException('Semestre letivo informado não encontrado', HttpStatus.NOT_FOUND);
+    }
+    return semestre;
   }
 
   async findComGrupos(ids: number[]): Promise<Semestre[]> {
-    return await this.semestreRepository.find({
-      where: {
-        semIntId: In(ids),
-      },
-      relations: {
-        grupo: true,
-      },
+    if (!ids || ids.length === 0) {
+      throw new HttpException('Nenhum identificador de semestre foi fornecido', HttpStatus.BAD_REQUEST);
+    }
+
+    return this.semestreRepository.find({
+      where: { semIntId: In(ids) },
+      relations: { grupo: true },
     });
   }
 
   async findComDemandas(ids: number[]): Promise<Semestre[]> {
-    return await this.semestreRepository.find({
-      where: {
-        semIntId: In(ids),
-      },
-      relations: {
-        demanda: true,
-      },
+    if (!ids || ids.length === 0) {
+      throw new HttpException('Nenhum identificador de semestre foi fornecido', HttpStatus.BAD_REQUEST);
+    }
+
+    return this.semestreRepository.find({
+      where: { semIntId: In(ids) },
+      relations: { demanda: true },
     });
   }
 }

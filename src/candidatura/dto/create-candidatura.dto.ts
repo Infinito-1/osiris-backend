@@ -1,9 +1,9 @@
-import { IsNotEmpty, IsBoolean, IsInt, IsEnum } from 'class-validator';
+import { IsNotEmpty, IsBoolean, IsInt, IsEnum, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { StatusCandidatura } from './status.enum';
 
 export class CreateCandidaturaDto {
-  @ApiProperty({ example: 'Pendente', description: 'Status da candidatura' })
+  @ApiProperty({ example: 'Pendente', description: 'Status inicial da candidatura' })
   @IsNotEmpty()
   @IsEnum(StatusCandidatura)
   canStrStatus: StatusCandidatura;
@@ -12,15 +12,16 @@ export class CreateCandidaturaDto {
   @IsBoolean()
   canBoolAprovacao: boolean;
 
-  @ApiProperty({ example: 1, description: 'ID do coordenador vinculado' })
+  @ApiProperty({ example: 1, description: 'ID do coordenador (opcional no início)', required: false })
+  @IsOptional()
   @IsInt()
-  cooIntId: number; // FK para Coordenador
+  cooIntId?: number;
 
   @ApiProperty({ example: 2, description: 'ID da demanda vinculada' })
   @IsInt()
-  demIntId: number; // FK para Demanda
+  demIntId: number;
 
-  @ApiProperty({ example: 3, description: 'ID do grupo vinculado' })
+  @ApiProperty({ example: 3, description: 'ID do grupo estudante vinculado' })
   @IsInt()
-  gruIntId: number; // FK para Grupo
+  gruIntId: number;
 }

@@ -2,6 +2,9 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Candidatura } from '../entities/candidatura.entity';
+import { Grupo } from '../../grupo/entities/grupo.entity';
+import { Demanda } from '../../demanda/entities/demanda.entity';
+import { Coordenador } from '../../coordenador/entities/coordenador.entity';
 import { CreateCandidaturaDto } from '../dto/create-candidatura.dto';
 import { UpdateCandidaturaDto } from '../dto/update-candidatura.dto';
 import { StatusCandidatura } from '../dto/status.enum';
@@ -11,6 +14,12 @@ export class CandidaturaService {
   constructor(
     @InjectRepository(Candidatura)
     private readonly candidaturaRepository: Repository<Candidatura>,
+    @InjectRepository(Grupo)
+    private readonly grupoRepository: Repository<Grupo>,
+    @InjectRepository(Demanda)
+    private readonly demandaRepository: Repository<Demanda>,
+    @InjectRepository(Coordenador)
+    private readonly coordenadorRepository: Repository<Coordenador>,
   ) {}
 
   async findAll(): Promise<Candidatura[]> {
@@ -19,75 +28,93 @@ export class CandidaturaService {
     });
   }
 
-  async findById(id: number): Promise<Candidatura | null> {
-    return this.candidaturaRepository.findOne({
+  async findById(id: number): Promise<Candidatura> {
+    const candidatura = await this.candidaturaRepository.findOne({
       where: { canIntId: id },
       relations: ['coordenador', 'demanda', 'grupo'],
     });
+    if (!candidatura) {
+      throw new HttpException('Candidatura não encontrada', HttpStatus.NOT_FOUND);
+    }
+    return candidatura;
   }
 
-  async findByStatus(status: string): Promise<Candidatura[]> {
-    const statusEnum = Object.values(StatusCandidatura).includes(status as StatusCandidatura)
-      ? (status as StatusCandidatura)
-      : undefined;
-
-    if (!statusEnum) {
-      throw new HttpException('Status inválido', HttpStatus.BAD_REQUEST);
-    }
-
+  async findByStatus(status: StatusCandidatura): Promise<Candidatura[]> {
     return this.candidaturaRepository.find({
-      where: { canStrStatus: statusEnum },
+      where: { canStrStatus: status },
       relations: ['coordenador', 'demanda', 'grupo'],
     });
   }
 
-  async create(dto: CreateCandidaturaDto): Promise<Candidatura> {
-    // 🔧 Bloqueio de duplicidade
+  async create(dto: CreateCandidaturaDto, usuarioLogadoId?: number): Promise<Candidatura> {
+    let grupoId = dto.gruIntId;
+
+    if (usuarioLogadoId) {
+      const grupoDono = await this.grupoRepository.findOne({
+        where: { usuario: { usuIntId: usuarioLogadoId } }
+      });
+      if (grupoDono) {
+        grupoId = grupoDono.gruIntId;
+      }
+    }
+
+    const grupo = await this.grupoRepository.findOne({ where: { gruIntId: grupoId } });
+    const demanda = await this.demandaRepository.findOne({ where: { demIntId: dto.demIntId } });
+    
+    if (!grupo || !demanda) {
+      throw new HttpException('Grupo ou Demanda base não encontrados para consolidação', HttpStatus.NOT_FOUND);
+    }
+
     const existente = await this.candidaturaRepository.findOne({
       where: {
-        grupo: { gruIntId: dto.gruIntId },
-        demanda: { demIntId: dto.demIntId },
+        grupo: { gruIntId: grupo.gruIntId },
+        demanda: { demIntId: demanda.demIntId },
       },
-      relations: ['grupo', 'demanda'],
     });
 
     if (existente) {
-      throw new HttpException('Candidatura duplicada para esta demanda', HttpStatus.BAD_REQUEST);
+      throw new HttpException('O seu grupo já possui uma candidatura ativa para esta demanda', HttpStatus.BAD_REQUEST);
     }
+
+    const coordenadorAlvo = dto.cooIntId 
+      ? await this.coordenadorRepository.findOne({ where: { cooIntId: dto.cooIntId } }) 
+      : undefined;
 
     const candidatura = this.candidaturaRepository.create({
       canStrStatus: StatusCandidatura.Pendente,
-      canBoolAprovacao: dto.canBoolAprovacao,
-      coordenador: { cooIntId: dto.cooIntId } as any,
-      demanda: { demIntId: dto.demIntId } as any,
-      grupo: { gruIntId: dto.gruIntId } as any,
+      canBoolAprovacao: dto.canBoolAprovacao || false,
+      demanda: demanda,
+      grupo: grupo,
+      coordenador: coordenadorAlvo || undefined
     });
 
     return this.candidaturaRepository.save(candidatura);
   }
 
-  async update(id: number, dto: UpdateCandidaturaDto): Promise<Candidatura | null> {
+  async update(id: number, dto: UpdateCandidaturaDto): Promise<Candidatura> {
     const candidatura = await this.findById(id);
-    if (!candidatura) {
-      throw new HttpException('Candidatura não encontrada', HttpStatus.NOT_FOUND);
-    }
 
     if (dto.canStrStatus) candidatura.canStrStatus = dto.canStrStatus;
     if (dto.canBoolAprovacao !== undefined) candidatura.canBoolAprovacao = dto.canBoolAprovacao;
-    if (dto.cooIntId) candidatura.coordenador = { cooIntId: dto.cooIntId } as any;
-    if (dto.demIntId) candidatura.demanda = { demIntId: dto.demIntId } as any;
-    if (dto.gruIntId) candidatura.grupo = { gruIntId: dto.gruIntId } as any;
+    
+    if (dto.cooIntId) {
+      const coo = await this.coordenadorRepository.findOne({ where: { cooIntId: dto.cooIntId } });
+      if (coo) candidatura.coordenador = coo || undefined;
+    }
+    if (dto.demIntId) {
+      const dem = await this.demandaRepository.findOne({ where: { demIntId: dto.demIntId } });
+      if (dem) candidatura.demanda = dem;
+    }
+    if (dto.gruIntId) {
+      const gru = await this.grupoRepository.findOne({ where: { gruIntId: dto.gruIntId } });
+      if (gru) candidatura.grupo = gru;
+    }
 
     return this.candidaturaRepository.save(candidatura);
   }
 
   async delete(id: number): Promise<void> {
     const candidatura = await this.findById(id);
-    if (!candidatura) {
-      throw new HttpException('Candidatura não encontrada', HttpStatus.NOT_FOUND);
-    }
-
-    // Ajuste: não excluir, apenas suspender (Admin pode excluir)
     candidatura.canStrStatus = StatusCandidatura.Recusada;
     await this.candidaturaRepository.save(candidatura);
   }

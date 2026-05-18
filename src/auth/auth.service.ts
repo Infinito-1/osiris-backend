@@ -11,20 +11,20 @@ export class AuthService {
     private readonly usuarioService: UsuarioService,
   ) {}
 
-  async validateUser(email: string, senha: string): Promise<Usuario | null> {
+  async validateUser(email: string, senha: string): Promise<any> {
     const usuario = await this.usuarioService.findByEmail(email);
     if (usuario && await bcrypt.compare(senha, usuario.usuStrSenha)) {
       const { usuStrSenha, ...result } = usuario;
-      return result as Usuario;
+      return result;
     }
     return null;
   }
 
-  async login(usuario: Usuario) {
+  async login(usuario: any) {
     const payload = {
       username: usuario.usuStrEmail,
       sub: usuario.usuIntId,
-      role: usuario.usuStrTipo, // 🔧 role vem da entidade Usuario
+      role: usuario.usuStrTipo,
     };
     return {
       access_token: this.jwtService.sign(payload),

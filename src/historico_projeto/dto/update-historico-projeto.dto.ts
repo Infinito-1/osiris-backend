@@ -1,22 +1,25 @@
-import { IsOptional, IsString, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsInt, IsEnum, IsUrl } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { StatusProjeto } from './status-projeto.enum';
 
 export class UpdateHistoricoProjetoDto {
+  @ApiProperty({ example: 'Descrição atualizada', required: false })
   @IsOptional()
   @IsString()
   hspStrDesc?: string;
 
+  @ApiProperty({ example: 'https://github.com/usuario/repositorio-novo', required: false })
   @IsOptional()
-  @IsString()
+  @IsUrl()
   hspStrLinkProjeto?: string;
 
+  @ApiProperty({ example: 'Bloqueado', enum: StatusProjeto, required: false })
   @IsOptional()
-  @IsString()
-  hspStrStatus?: string;
+  @IsEnum(StatusProjeto)
+  hspStrStatus?: StatusProjeto;
 
+  @ApiProperty({ example: 1, required: false })
   @IsOptional()
-  @IsDateString()
-  hspDateData?: Date;
-
-  @IsOptional()
+  @IsInt()
   proIntId?: number;
 }
