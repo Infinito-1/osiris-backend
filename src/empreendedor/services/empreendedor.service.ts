@@ -1,7 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Empreendedor } from '../entities/empreendedor.entity';
+import { Usuario } from '../../usuario/entities/usuario.entity';
+import { Demanda } from '../../demanda/entities/demanda.entity';
+import { Candidatura } from '../../candidatura/entities/candidatura.entity';
 import { CreateEmpreendedorDto } from '../dto/create-empreendedor.dto';
 import { UpdateEmpreendedorDto } from '../dto/update-empreendedor.dto';
 
@@ -10,47 +13,142 @@ export class EmpreendedorService {
   constructor(
     @InjectRepository(Empreendedor)
     private readonly empreendedorRepository: Repository<Empreendedor>,
+    @InjectRepository(Usuario)
+    private readonly usuarioRepository: Repository<Usuario>,
+    @InjectRepository(Demanda)
+    private readonly demandaRepository: Repository<Demanda>,
+    @InjectRepository(Candidatura)
+    private readonly candidaturaRepository: Repository<Candidatura>,
   ) {}
 
   async findAll(): Promise<Empreendedor[]> {
     return this.empreendedorRepository.find({ relations: ['usuario'] });
   }
 
-  async findById(id: number): Promise<Empreendedor | null> {
-    return this.empreendedorRepository.findOne({
-      where: { empIntId: id },
-      relations: ['usuario'],
+  async findById(id: number): Promise<Empreendedor> {
+    const empreendedor = await this.empreendedorRepository.findOne({ 
+      where: { empIntId: id }, 
+      relations: ['usuario'] 
     });
+    if (!empreendedor) {
+      throw new HttpException('Empreendedor não encontrado', HttpStatus.NOT_FOUND);
+    }
+    return empreendedor;
   }
 
-  async findByEmpresa(empresa: string): Promise<Empreendedor[]> {
-    return this.empreendedorRepository.find({
-      where: { empStrEmpresa: empresa },
+  async findByUsuarioId(usuarioId: number): Promise<Empreendedor> {
+    const empreendedor = await this.empreendedorRepository.findOne({
+      where: { usuario: { usuIntId: usuarioId } },
       relations: ['usuario'],
     });
+    if (!empreendedor) {
+      throw new HttpException('Perfil de empreendedor não encontrado para este utilizador.', HttpStatus.NOT_FOUND);
+    }
+    return empreendedor;
   }
 
   async create(dto: CreateEmpreendedorDto): Promise<Empreendedor> {
+    const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: dto.usuIntId } });
+    if (!usuario) {
+      throw new HttpException('Usuário base não encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    usuario.usuStrTipo = 'Empreendedor';
+    await this.usuarioRepository.save(usuario);
+
     const empreendedor = this.empreendedorRepository.create({
-      ...dto,
-      usuario: { usuIntId: dto.usuIntId } as any, // FK para Usuario
+      empStrEmpresa: dto.empStrEmpresa,
+      empChaCnpj: dto.empChaCnpj,
+      usuario: usuario,
     });
+
     return this.empreendedorRepository.save(empreendedor);
   }
 
-  async update(id: number, dto: UpdateEmpreendedorDto): Promise<Empreendedor | null> {
+  async update(id: number, dto: UpdateEmpreendedorDto): Promise<Empreendedor> {
     const empreendedor = await this.findById(id);
-    if (!empreendedor) return null;
 
-    Object.assign(empreendedor, dto);
+    if (dto.empStrEmpresa) empreendedor.empStrEmpresa = dto.empStrEmpresa;
+    if (dto.empChaCnpj) empreendedor.empChaCnpj = dto.empChaCnpj;
+
     if (dto.usuIntId) {
-      empreendedor.usuario = { usuIntId: dto.usuIntId } as any;
+      const novoUsuario = await this.usuarioRepository.save({ usuIntId: dto.usuIntId } as any);
+      empreendedor.usuario = novoUsuario;
     }
 
     return this.empreendedorRepository.save(empreendedor);
   }
 
-  async delete(id: number) {
-    return this.empreendedorRepository.delete(id);
+  async suspender(id: number): Promise<Empreendedor> {
+    const empreendedor = await this.findById(id);
+    if (empreendedor.usuario) {
+      empreendedor.usuario.usuBoolAtivo = false;
+      await this.usuarioRepository.save(empreendedor.usuario);
+    }
+    return empreendedor;
+  }
+
+  async reativar(id: number): Promise<Empreendedor> {
+    const empreendedor = await this.findById(id);
+    if (empreendedor.usuario) {
+      empreendedor.usuario.usuBoolAtivo = true;
+      await this.usuarioRepository.save(empreendedor.usuario);
+    }
+    return empreendedor;
+  }
+
+  async delete(id: number): Promise<void> {
+    await this.findById(id);
+    await this.empreendedorRepository.delete(id);
+  }
+
+  async reativarDemanda(demIntId: number, usuarioId: number): Promise<Demanda> {
+    const empreendedor = await this.findByUsuarioId(usuarioId);
+    
+    const demanda = await this.demandaRepository.findOne({
+      where: { demIntId, empreendedor: { empIntId: empreendedor.empIntId } }
+    });
+
+    if (!demanda) {
+      throw new HttpException('Demanda não encontrada ou não pertence a este empreendedor', HttpStatus.NOT_FOUND);
+    }
+
+    demanda.demBoolAtivo = false;     
+    demanda.demBoolAceitacao = false; 
+
+    return this.demandaRepository.save(demanda);
+  }
+
+  async getDashboardDados(usuarioId: number): Promise<any> {
+    const empreendedor = await this.findByUsuarioId(usuarioId);
+
+    const totalDemandas = await this.demandaRepository.count({
+      where: { empreendedor: { empIntId: empreendedor.empIntId } }
+    });
+
+    const aprovadasGaleria = await this.demandaRepository.count({
+      where: { empreendedor: { empIntId: empreendedor.empIntId }, demBoolAceitacao: true, demBoolAtivo: true }
+    });
+
+    const analisePendente = await this.demandaRepository.count({
+      where: { empreendedor: { empIntId: empreendedor.empIntId }, demBoolAceitacao: false }
+    });
+
+    const candidaturasRecebidas = await this.candidaturaRepository.count({
+      where: { demanda: { empreendedor: { empIntId: empreendedor.empIntId } } }
+    });
+
+    return {
+      modulo: 'Painel Corporativo de Inovação - Osiris',
+      empresa: empreendedor.empStrEmpresa,
+      cnpj: empreendedor.empChaCnpj,
+      metricas: {
+        totalDemandasSubmetidas: totalDemandas,
+        demandasPublicadasNaGaleria: aprovadasGaleria,
+        demandasEmAnalisePeloCoordenador: analisePendente,
+        propostasDeGruposRecebidas: candidaturasRecebidas
+      },
+      timestamp: new Date().toISOString()
+    };
   }
 }

@@ -1,6 +1,6 @@
 import {
   Controller, Post, Body, Delete, Param, Get, ParseIntPipe, Put,
-  UseGuards, HttpCode, HttpStatus
+  UseGuards, HttpCode, HttpStatus, Req
 } from '@nestjs/common';
 import { AdminService } from '../services/admin.service';
 import { CreateAdminDto } from '../dto/create-admin.dto';
@@ -29,9 +29,11 @@ export class AdminController {
   @Roles('Admin')
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiResponse({ status: 204, description: 'Remove um administrador pelo ID' })
-  removerAdmin(@Param('id', ParseIntPipe) id: number) {
-    return this.adminService.removerAdmin(id);
+  @ApiResponse({ status: 204, description: 'Inativa um administrador pelo ID protegendo contra auto-exclusão' })
+  removerAdmin(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    // Captura o ID do administrador logado vindo do JwtAuthGuard para validar a Regra de Exceção da UC-21
+    const usuarioLogadoId = req.user?.usuIntId || req.user?.id; 
+    return this.adminService.inativarAdmin(id, usuarioLogadoId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -59,9 +61,9 @@ export class AdminController {
   @Roles('Admin')
   @Delete('usuario/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiResponse({ status: 204, description: 'Exclui um usuário pelo ID' })
+  @ApiResponse({ status: 204, description: 'Inativa um usuário pelo ID (Soft Delete)' })
   excluirUsuario(@Param('id', ParseIntPipe) id: number) {
-    return this.adminService.excluirUsuario(id);
+    return this.adminService.inativarUsuario(id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -75,11 +77,23 @@ export class AdminController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('Admin')
+  @Put('demanda/:id/moderar')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, description: 'Modera e oculta uma demanda inadequada através de denúncia (UC-24)' })
+  moderarDemanda(
+    @Param('id', ParseIntPipe) id: number, 
+    @Body('parecerTecnico') parecerTecnico: string
+  ) {
+    return this.adminService.moderarEOmitirDemanda(id, parecerTecnico);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Admin')
   @Delete('projeto/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiResponse({ status: 204, description: 'Exclui um projeto pelo ID' })
+  @ApiResponse({ status: 204, description: 'Inativa um projeto pelo ID (Soft Delete)' })
   excluirProjeto(@Param('id', ParseIntPipe) id: number) {
-    return this.adminService.excluirProjeto(id);
+    return this.adminService.inativarProjeto(id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -104,7 +118,7 @@ export class AdminController {
   @Roles('Admin')
   @Get('auditoria')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Lista registros de auditoria' })
+  @ApiResponse({ status: 200, description: 'Lista registros de auditoria global' })
   listarAuditoria() {
     return this.adminService.listarAuditoria();
   }

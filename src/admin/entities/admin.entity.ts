@@ -9,7 +9,7 @@ export class Admin {
 
   @IsBoolean()
   @Column({ name: 'adm_bool_ativo', default: true })
-  admBolAtivo!: boolean;
+  admBoolAtivo!: boolean;
 
   @OneToOne(() => Usuario, { eager: true })
   @JoinColumn({ name: 'usu_int_id' })

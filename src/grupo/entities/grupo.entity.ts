@@ -44,11 +44,9 @@ export class Grupo {
   @Column({ name: 'gru_str_membros', length: 200, nullable: true })
   gruStrMembros?: string;
 
-  // Novo campo: status ativo/inativo (suspensão)
   @Column({ name: 'gru_bool_ativo', default: true })
   gruBoolAtivo!: boolean;
 
-  // Novo campo: link de portfólio (deploy, GitHub, etc.)
   @Column({ name: 'gru_str_portfolio', length: 300, nullable: true })
   gruStrPortfolio?: string;
 

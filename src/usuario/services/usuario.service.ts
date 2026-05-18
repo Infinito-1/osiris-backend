@@ -26,7 +26,6 @@ export class UsuarioService {
   }
 
   async create(dto: CreateUsuarioDto): Promise<Usuario> {
-    // Verifica se já existe usuário com o mesmo email
     const existing = await this.findByEmail(dto.usuStrEmail);
     if (existing) {
       throw new HttpException('Email já cadastrado', HttpStatus.CONFLICT);
@@ -49,7 +48,6 @@ export class UsuarioService {
       throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
     }
 
-    // Se senha foi informada, gera novo hash
     if (dto.usuStrSenha) {
       const salt = await bcrypt.genSalt(10);
       dto.usuStrSenha = await bcrypt.hash(dto.usuStrSenha, salt);
@@ -64,6 +62,13 @@ export class UsuarioService {
     if (!usuario) {
       throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
     }
-    await this.usuarioRepository.delete(id);
+
+    if (usuario.usuStrTipo === 'Admin') {
+      throw new HttpException('Não é permitido excluir administradores diretamente', HttpStatus.FORBIDDEN);
+    }
+
+    // Em vez de excluir, inativar
+    usuario.usuBoolAtivo = false;
+    await this.usuarioRepository.save(usuario);
   }
 }

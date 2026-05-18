@@ -1,21 +1,14 @@
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  ParseIntPipe,
-  Post,
-  Put,
+  Body, Controller, Delete, Get, HttpCode, HttpStatus,
+  Param, ParseIntPipe, Post, Put, UseGuards
 } from '@nestjs/common';
 import { UsuarioService } from '../services/usuario.service';
 import { Usuario } from '../entities/usuario.entity';
 import { CreateUsuarioDto } from '../dto/create-usuario.dto';
 import { UpdateUsuarioDto } from '../dto/update-usuario.dto';
-
-// Swagger
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { RolesGuard } from '../../auth/roles.guard';
+import { Roles } from '../../auth/roles.decorator';
 import { ApiTags, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('Usuários')
@@ -54,9 +47,12 @@ export class UsuarioController {
     return this.usuarioService.update(id, dto);
   }
 
+  // Exclusão só para Admin
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Admin')
   @Delete('/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiResponse({ status: 204, description: 'Remove um usuário' })
+  @ApiResponse({ status: 204, description: 'Inativa um usuário (somente Admin)' })
   delete(@Param('id', ParseIntPipe) id: number) {
     return this.usuarioService.delete(id);
   }

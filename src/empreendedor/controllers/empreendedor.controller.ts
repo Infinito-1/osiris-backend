@@ -1,88 +1,108 @@
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  ParseIntPipe,
-  Post,
-  Put,
-  UseGuards,
-  Request,
+  Body, Controller, Delete, Get, HttpCode, HttpStatus,
+  Param, ParseIntPipe, Post, Put, UseGuards, Request
 } from '@nestjs/common';
 import { EmpreendedorService } from '../services/empreendedor.service';
 import { Empreendedor } from '../entities/empreendedor.entity';
+import { Demanda } from '../../demanda/entities/demanda.entity';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { RolesGuard } from '../../auth/roles.guard';
+import { Roles } from '../../auth/roles.decorator';
 import { CreateEmpreendedorDto } from '../dto/create-empreendedor.dto';
 import { UpdateEmpreendedorDto } from '../dto/update-empreendedor.dto';
-
-// 🔑 Swagger decorators
 import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Empreendedores')
-@ApiBearerAuth()
-@Controller('/empreendedores')
+@Controller('empreendedores')
 export class EmpreendedorController {
   constructor(private readonly empreendedorService: EmpreendedorService) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Lista todos os empreendedores' })
   findAll(): Promise<Empreendedor[]> {
     return this.empreendedorService.findAll();
   }
 
-  @Get('/:id')
+  @Get(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Busca empreendedor pelo ID' })
-  findById(@Param('id', ParseIntPipe) id: number): Promise<Empreendedor | null> {
+  findById(@Param('id', ParseIntPipe) id: number): Promise<Empreendedor> {
     return this.empreendedorService.findById(id);
   }
 
-  @Get('empresa/:nomeEmpresa')
-  @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Busca empreendedores pelo nome da empresa' })
-  findByEmpresa(@Param('nomeEmpresa') empresa: string): Promise<Empreendedor[]> {
-    return this.empreendedorService.findByEmpresa(empresa);
-  }
-
-  @UseGuards(JwtAuthGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiResponse({ status: 201, description: 'Cria um novo empreendedor' })
   create(@Body() dto: CreateEmpreendedorDto): Promise<Empreendedor> {
     return this.empreendedorService.create(dto);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Put('/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Empreendedor', 'Admin')
+  @ApiBearerAuth()
+  @Get('dashboard')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Atualiza um empreendedor existente' })
+  getDashboard(@Request() req): Promise<any> {
+    return this.empreendedorService.getDashboardDados(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Empreendedor', 'Admin')
+  @ApiBearerAuth()
+  @Get('perfil')
+  @HttpCode(HttpStatus.OK)
+  getPerfil(@Request() req): Promise<Empreendedor> {
+    return this.empreendedorService.findByUsuarioId(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Empreendedor', 'Admin')
+  @ApiBearerAuth()
+  @Put(':id')
+  @HttpCode(HttpStatus.OK)
   update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateEmpreendedorDto,
-  ): Promise<Empreendedor | null> {
+    @Param('id', ParseIntPipe) id: number, 
+    @Body() dto: UpdateEmpreendedorDto
+  ): Promise<Empreendedor> {
     return this.empreendedorService.update(id, dto);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Delete('/:id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiResponse({ status: 204, description: 'Remove um empreendedor' })
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.empreendedorService.delete(id);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Empreendedor', 'Admin')
+  @ApiBearerAuth()
+  @Put('demandas/:demIntId/reativar')
+  @HttpCode(HttpStatus.OK)
+  reativarDemanda(
+    @Param('demIntId', ParseIntPipe) demIntId: number,
+    @Request() req
+  ): Promise<Demanda> {
+    return this.empreendedorService.reativarDemanda(demIntId, req.user.userId);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('perfil')
+  @ApiBearerAuth()
+  @Post('logout')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Retorna perfil do empreendedor autenticado' })
-  getPerfil(@Request() req) {
-    return {
-      message: 'Usuário autenticado acessando Empreendedor',
-      usuario: req.user,
+  logout(@Request() req) {
+    return { 
+      statusCode: HttpStatus.OK,
+      message: 'Sessão encerrada com sucesso no Osiris. Até logo!' 
     };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Admin')
+  @ApiBearerAuth()
+  @Put('suspender/:id')
+  @HttpCode(HttpStatus.OK)
+  suspender(@Param('id', ParseIntPipe) id: number): Promise<Empreendedor> {
+    return this.empreendedorService.suspender(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Admin')
+  @ApiBearerAuth()
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  delete(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    return this.empreendedorService.delete(id);
   }
 }

@@ -1,3 +1,4 @@
+// src/projeto/entities/projeto.entity.ts ou onde estiver sua entidade Projeto
 import {
   Column,
   Entity,
@@ -23,11 +24,13 @@ export class Projeto {
   @IsNotEmpty()
   proDateInicio!: Date;
 
+  @Column({ name: 'pro_bool_ativo', type: 'boolean', default: true })
+  proBoolAtivo!: boolean;
+
   @OneToOne(() => Candidatura)
   @JoinColumn({ name: 'can_int_id' })
   candidatura!: Candidatura;
 
-  // 🔥 Adicione este relacionamento inverso
   @OneToMany(() => HistoricoProjeto, (historico) => historico.projeto)
   historicos!: HistoricoProjeto[];
 }

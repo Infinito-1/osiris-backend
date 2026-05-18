@@ -12,7 +12,7 @@ export class DemandaService {
   constructor(
     @InjectRepository(Demanda)
     private readonly demandaRepository: Repository<Demanda>,
-    private readonly tipoDemandaService: TipoDemandaService, // injetando o service de TipoDemanda
+    private readonly tipoDemandaService: TipoDemandaService,
   ) {}
 
   async findAll(): Promise<Demanda[]> {
@@ -21,11 +21,29 @@ export class DemandaService {
     });
   }
 
+  /**
+   * findById padrão utilizado pela Galeria Pública (Apenas ativas e aceitas)
+   */
   async findById(id: number): Promise<Demanda | null> {
     return this.demandaRepository.findOne({
       where: { demIntId: id, demBoolAtivo: true, demBoolAceitacao: true },
       relations: ['semestre', 'empreendedor', 'coordenador', 'tipo'],
     });
+  }
+
+  /**
+   * Método interno para fluxos de negócio da Coordenação e Admin 
+   * Busca a demanda ignorando se ela já foi aceita ou ativada na galeria.
+   */
+  async findOneInternal(id: number): Promise<Demanda> {
+    const demanda = await this.demandaRepository.findOne({
+      where: { demIntId: id },
+      relations: ['semestre', 'empreendedor', 'coordenador', 'tipo'],
+    });
+    if (!demanda) {
+      throw new HttpException('Demanda não encontrada no sistema', HttpStatus.NOT_FOUND);
+    }
+    return demanda;
   }
 
   async findByNome(nome: string): Promise<Demanda[]> {
@@ -46,7 +64,6 @@ export class DemandaService {
   async create(dto: CreateDemandaDto): Promise<Demanda> {
     const tipos: TipoDemanda[] = [];
 
-    // IDs de tipos existentes
     if (dto.tipIntIds) {
       for (const id of dto.tipIntIds) {
         const tipo = await this.tipoDemandaService.findById(id);
@@ -54,7 +71,6 @@ export class DemandaService {
       }
     }
 
-    // Nomes de tipos novos ou existentes
     if (dto.tipStrNomes) {
       for (const nome of dto.tipStrNomes) {
         const tipo = await this.tipoDemandaService.findOrCreate(nome);
@@ -77,10 +93,7 @@ export class DemandaService {
   }
 
   async update(id: number, dto: UpdateDemandaDto): Promise<Demanda | null> {
-    const demanda = await this.findById(id);
-    if (!demanda) {
-      throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
-    }
+    const demanda = await this.findOneInternal(id);
 
     if (dto.demStrNome) demanda.demStrNome = dto.demStrNome;
     if (dto.demStrDescricao) demanda.demStrDescricao = dto.demStrDescricao;
@@ -109,19 +122,13 @@ export class DemandaService {
   }
 
   async desativar(id: number): Promise<Demanda> {
-    const demanda = await this.demandaRepository.findOne({ where: { demIntId: id } });
-    if (!demanda) {
-      throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
-    }
+    const demanda = await this.findOneInternal(id);
     demanda.demBoolAtivo = false;
     return this.demandaRepository.save(demanda);
   }
 
   async delete(id: number): Promise<void> {
-    const demanda = await this.demandaRepository.findOne({ where: { demIntId: id } });
-    if (!demanda) {
-      throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
-    }
+    await this.findOneInternal(id);
     await this.demandaRepository.delete(id);
   }
 }

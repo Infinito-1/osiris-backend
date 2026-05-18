@@ -27,7 +27,6 @@ export class CandidaturaService {
   }
 
   async findByStatus(status: string): Promise<Candidatura[]> {
-    // converte string para enum e valida
     const statusEnum = Object.values(StatusCandidatura).includes(status as StatusCandidatura)
       ? (status as StatusCandidatura)
       : undefined;
@@ -43,8 +42,21 @@ export class CandidaturaService {
   }
 
   async create(dto: CreateCandidaturaDto): Promise<Candidatura> {
+    // 🔧 Bloqueio de duplicidade
+    const existente = await this.candidaturaRepository.findOne({
+      where: {
+        grupo: { gruIntId: dto.gruIntId },
+        demanda: { demIntId: dto.demIntId },
+      },
+      relations: ['grupo', 'demanda'],
+    });
+
+    if (existente) {
+      throw new HttpException('Candidatura duplicada para esta demanda', HttpStatus.BAD_REQUEST);
+    }
+
     const candidatura = this.candidaturaRepository.create({
-      canStrStatus: dto.canStrStatus,
+      canStrStatus: StatusCandidatura.Pendente,
       canBoolAprovacao: dto.canBoolAprovacao,
       coordenador: { cooIntId: dto.cooIntId } as any,
       demanda: { demIntId: dto.demIntId } as any,
@@ -74,6 +86,9 @@ export class CandidaturaService {
     if (!candidatura) {
       throw new HttpException('Candidatura não encontrada', HttpStatus.NOT_FOUND);
     }
-    await this.candidaturaRepository.delete(id);
+
+    // Ajuste: não excluir, apenas suspender (Admin pode excluir)
+    candidatura.canStrStatus = StatusCandidatura.Recusada;
+    await this.candidaturaRepository.save(candidatura);
   }
 }
