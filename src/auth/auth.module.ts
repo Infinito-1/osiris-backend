@@ -4,8 +4,10 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
+import { AzureStrategy } from './azure.strategy';
 import { UsuarioModule } from '../usuario/usuario.module';
 import { RolesGuard } from './roles.guard';
+import { AzureAuthGuard } from './azure-auth.guard';
 
 @Module({
   imports: [
@@ -17,7 +19,13 @@ import { RolesGuard } from './roles.guard';
     UsuarioModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, RolesGuard], // 🔧 RolesGuard registrado
+  providers: [
+    AuthService,
+    JwtStrategy,
+    AzureStrategy,
+    RolesGuard,
+    AzureAuthGuard,
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}

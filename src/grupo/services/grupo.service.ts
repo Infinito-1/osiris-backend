@@ -166,7 +166,7 @@ export class GrupoService {
     });
 
     const candidaturasAprovadas = await this.candidaturaRepository.count({
-      where: { grupo: { gruIntId: grupo.gruIntId }, canStrStatus: StatusCandidatura.Aceita || 'Aceita' as any }
+      where: { grupo: { gruIntId: grupo.gruIntId }, canStrStatus: StatusCandidatura.Aceita }
     });
 
     return {

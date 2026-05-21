@@ -1,6 +1,6 @@
 import {
   Body, Controller, Delete, Get, HttpCode, HttpStatus,
-  Param, ParseIntPipe, Post, Put, UseGuards
+  Param, ParseIntPipe, Post, Put, UseGuards, Req
 } from '@nestjs/common';
 import { UsuarioService } from '../services/usuario.service';
 import { Usuario } from '../entities/usuario.entity';
@@ -19,8 +19,8 @@ export class UsuarioController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiResponse({ status: 201, description: 'Cria um novo usuário e devolve rota de destino' })
-  create(@Body() dto: CreateUsuarioDto): Promise<any> {
-    return this.usuarioService.create(dto);
+  create(@Body() dto: CreateUsuarioDto, @Req() req: any): Promise<any> {
+    return this.usuarioService.create(dto, req?.user);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -49,8 +49,9 @@ export class UsuarioController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateUsuarioDto,
+    @Req() req: any,
   ): Promise<Usuario> {
-    return this.usuarioService.update(id, dto);
+    return this.usuarioService.update(id, dto, req.user);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -58,7 +59,7 @@ export class UsuarioController {
   @ApiBearerAuth()
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  delete(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    return this.usuarioService.delete(id);
+  delete(@Param('id', ParseIntPipe) id: number, @Req() req: any): Promise<void> {
+    return this.usuarioService.delete(id, req.user);
   }
 }

@@ -45,7 +45,7 @@ export class TipoDemandaService implements OnApplicationBootstrap {
   async findByName(tipStrNome: string): Promise<TipoDemanda[]> {
     return this.tipoDemandaRepository.find({
       where: { tipStrNome: ILike(`%${tipStrNome}%`) },
-      relations: { demandas: true },
+      // 💡 Removido relations direto para evitar loop circular infinito com a entidade Demanda
     });
   }
 
@@ -54,9 +54,10 @@ export class TipoDemandaService implements OnApplicationBootstrap {
       throw new HttpException('Identificadores de tipos de demanda não foram fornecidos', HttpStatus.BAD_REQUEST);
     }
 
+    // 💡 Ao carregar demandas vinculadas, certifique-se de tratar a paginação/exibição no frontend
     return this.tipoDemandaRepository.find({
       where: { tipIntId: In(ids) },
-      relations: { demandas: true },
+      relations: ['demandas'], 
     });
   }
 
@@ -75,7 +76,7 @@ export class TipoDemandaService implements OnApplicationBootstrap {
   async update(id: number, dto: UpdateTipoDemandaDto): Promise<TipoDemanda> {
     const tipo = await this.findById(id);
 
-    if (dto.tipStrNome) {
+    if (dto.tipStrNome && dto.tipStrNome.trim() !== '') {
       const exist = await this.tipoDemandaRepository.findOne({
         where: { tipStrNome: dto.tipStrNome }
       });
@@ -83,6 +84,8 @@ export class TipoDemandaService implements OnApplicationBootstrap {
         throw new HttpException('Já existe outra categoria com este nome cadastrada', HttpStatus.CONFLICT);
       }
       tipo.tipStrNome = dto.tipStrNome;
+    } else {
+      throw new HttpException('O nome informado para atualização não pode estar vazio', HttpStatus.BAD_REQUEST);
     }
 
     return this.tipoDemandaRepository.save(tipo);

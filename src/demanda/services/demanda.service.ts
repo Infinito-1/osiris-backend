@@ -75,7 +75,7 @@ export class DemandaService {
       demStrNome: dto.demStrNome,
       demStrDescricao: dto.demStrDescricao,
       demBoolAceitaMudancaTipo: dto.demBoolAceitaMudancaTipo,
-      demBoolAceitacao: dto.demBoolAceitacao,
+      demBoolAceitacao: false, // RN: Toda demanda criada nasce pendente de aprovação do Coordenador
       semestre: { semIntId: dto.semIntId } as any,
       empreendedor: { empIntId: dto.empIntId } as any,
       coordenador: { cooIntId: dto.cooIntId } as any,

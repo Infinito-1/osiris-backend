@@ -1,0 +1,45 @@
+@startuml UC01_Realizar_Cadastro
+
+<style>
+activityDiagram {
+  FontSize 11
+  Padding 3
+  Margin 2
+  LineColor #2C3E50
+}
+</style>
+skinparam BackgroundColor transparent
+skinparam shadowing false
+
+title UC-01 — Realizar Cadastro (RF-01 / RN-17 / RN-19)
+
+start
+:Usuário Visitante acessa o formulário de cadastro;
+:Preenche os dados obrigatórios;
+:Seleciona seu perfil de acesso (RN-17);
+
+if (Perfil selecionado é Líder de Grupo?) then (sim)
+  if (E-mail possui domínio institucional válido? (RN-19)) then (não)
+    :Exibir "Cadastro bloqueado: e-mail institucional obrigatório";
+    end
+  else (sim)
+  endif
+else (não)
+endif
+
+if (E-mail já está registrado na base Neon?) then (sim)
+  :Exibir erro "E-mail já cadastrado no sistema";
+  end
+else (não)
+  if (Existem campos obrigatórios vazios?) then (sim)
+    :Sinalizar campos e exigir preenchimento;
+    end
+  else (não)
+    :Persistir registro no PostgreSQL (usuBoolAtivo = true);
+    :Disparar e-mail de confirmação via API;
+    :Redirecionar usuário para a tela de Login;
+    stop
+  endif
+endif
+
+@enduml

@@ -1,0 +1,36 @@
+@startuml UC05_Gerenciar_Candidaturas
+
+<style>
+activityDiagram {
+  FontSize 11
+  Padding 3
+  Margin 2
+  LineColor #2C3E50
+}
+</style>
+skinparam BackgroundColor transparent
+skinparam shadowing false
+
+title UC-05 — Gerenciar Candidaturas (RF-11 / RN-06 / RN-15)
+
+start
+:Coordenador visualiza fila de candidaturas da demanda;
+:Examina o portfólio público do grupo (links GitHub);
+
+if (Candidatura mudou para 'Desistente' em segundo plano? (RN-14)) then (sim)
+  :Remover item da fila do Coordenador;
+  end
+else (não)
+  if (Decisão sobre o grupo?) then (Aceitar Candidatura)
+    :Alterar status da candidatura para "Aceita";
+    :Instanciar nova entidade 'Projeto' com data atual;
+    :Bloquear o recebimento de novas candidaturas para a demanda;
+  else (Recusar Candidatura)
+    :Alterar status da candidatura para "Recusada";
+  endif
+  :Gravar alterações no PostgreSQL;
+  :Disparar e-mail de notificação aos alunos e empreendedor (RN-15);
+  stop
+endif
+
+@enduml

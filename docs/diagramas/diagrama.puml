@@ -1,78 +1,438 @@
-@startuml Osiris_Class_Diagram
+@startuml Osiris_Enterprise_BCE_Micro_Style
 
-skinparam monochrome false
-skinparam classAttributeIconSize 0
+left to right direction
+
+' =========================================================
+' ESTILIZAÇÃO E COMPACTAÇÃO DE FONTES E PADDING (MICRO-STYLE)
+' =========================================================
+<style>
+document {
+  Margin 0
+  Padding 0
+}
+package {
+  Padding 2
+  Margin 2
+  FontSize 11
+}
+class {
+  Padding 1
+  Margin 2
+  FontSize 10
+  AttributeFontSize 9
+  MethodFontSize 9
+}
+</style>
+
+' Configurações de layout seguras para evitar que o Graphviz corte elementos
+skinparam nodesep 18
+skinparam ranksep 35
+skinparam packageStyle rectangle
 skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam wrapWidth 120
+skinparam maxMessageSize 120
 
-enum UsuarioTipo {
-  Admin
-  Coordenador
-  Empreendedor
-  Grupo
+' =========================================================
+' 1. CAMADA DE FRONTEIRA (BOUNDARY)
+' =========================================================
+package "Boundary (Controllers & DTOs)" {
+
+  package "Segurança & Filtros" {
+    class JwtAuthGuard {
+      + canActivate(context: ExecutionContext): boolean
+    }
+    class RolesGuard {
+      + canActivate(context: ExecutionContext): boolean
+    }
+    annotation Roles {
+      + roles: string[]
+    }
+  }
+
+  package "Controllers (HTTP Endpoints)" {
+    class AuthController {
+      - authService: AuthService
+      + login(dto: LoginDto): Promise<any>
+      + logout(): Promise<void>
+      + redefinirSenha(dto: ResetSenhaDto): Promise<void>
+      + loginMicrosoft(): Promise<any>
+    }
+
+    class UsuarioController {
+      - usuarioService: UsuarioService
+      + create(dto: CreateUsuarioDto): Promise<any>
+      + findAll(): Promise<Usuario[]>
+      + findById(id: number): Promise<Usuario>
+      + update(id: number, dto: UpdateUsuarioDto): Promise<Usuario>
+      + delete(id: number): Promise<void>
+    }
+
+    class DemandaController {
+      - demandaService: DemandaService
+      + create(dto: CreateDemandaDto): Promise<Demanda>
+      + findAll(): Promise<Demanda[]>
+      + findById(id: number): Promise<Demanda>
+      + update(id: number, dto: UpdateDemandaDto): Promise<Demanda>
+      + delete(id: number): Promise<void>
+    }
+
+    class TipoDemandaController {
+      - tipoDemandaService: TipoDemandaService
+      + findAll(): Promise<TipoDemanda[]>
+      + findComDemandas(ids: string): Promise<TipoDemanda[]>
+      + findByName(nome: string): Promise<TipoDemanda[]>
+      + findById(id: number): Promise<TipoDemanda>
+      + create(dto: CreateTipoDemandaDto): Promise<TipoDemanda>
+      + update(id: number, dto: UpdateTipoDemandaDto): Promise<TipoDemanda>
+    }
+
+    class CandidaturaController {
+      - candidaturaService: CandidaturaService
+      + candidatar(dto: CreateCandidaturaDto): Promise<Candidatura>
+      + avaliarCandidatura(id: number, status: string): Promise<Candidatura>
+      + desistirCandidatura(id: number): Promise<void>
+    }
+
+    class ProjetoController {
+      - projetoService: ProjetoService
+      + findAll(): Promise<Projeto[]>
+      + findById(id: number): Promise<Projeto>
+      + create(dto: CreateProjetoDto): Promise<Projeto>
+      + update(id: number, dto: UpdateProjetoDto): Promise<Projeto>
+      + delete(id: number): Promise<void>
+    }
+
+    class SemestreController {
+      - semestreService: SemestreService
+      + findAll(): Promise<Semestre[]>
+      + findById(id: number): Promise<Semestre>
+      + findComGrupos(ids: string): Promise<Semestre[]>
+      + findComDemandas(ids: string): Promise<Semestre[]>
+    }
+  }
+
+  package "Data Transfer Objects (DTOs)" {
+    together {
+      class LoginDto {
+        - emailStr: string
+        - senhaStr: string
+      }
+      class ResetSenhaDto {
+        - emailStr: string
+      }
+      class CreateUsuarioDto {
+        - usuStrNome: string
+        - usuStrEmail: string
+        - usuStrSenha: string
+        - usuStrTelefone?: string
+        - usuStrTipo: string
+      }
+    }
+    together {
+      class UpdateUsuarioDto {
+        - usuStrNome?: string
+        - usuStrEmail?: string
+        - usuStrSenha?: string
+        - usuStrTelefone?: string
+        - usuStrTipo?: string
+      }
+      class CreateProjetoDto {
+        - proStrDescricao: string
+        - proDateInicio: Date
+        - canIntId: number
+      }
+      class UpdateProjetoDto {
+        - proStrDescricao?: string
+        - proDateInicio?: Date
+        - proBoolAtivo?: boolean
+      }
+    }
+    together {
+      class CreateDemandaDto {
+        - demStrTitulo: string
+        - semIntId: number
+        - tipoDemandaIds: number[]
+      }
+      class UpdateDemandaDto {
+        - demStrTitulo?: string
+        - demBoolAtivo?: boolean
+      }
+      class CreateCandidaturaDto {
+        - gruIntId: number
+        - demIntId: number
+      }
+      class CreateTipoDemandaDto {
+        - tipStrNome: string
+      }
+      class UpdateTipoDemandaDto {
+        - tipStrNome: string
+      }
+    }
+  }
 }
 
-enum CandidaturaStatus {
-  Pendente
-  Aceita
-  Recusada
+' =========================================================
+' 2. CAMADA DE CONTROLE (CONTROL)
+' =========================================================
+package "Control (Services)" {
+
+  class AuthService {
+    - usuarioService: UsuarioService
+    + validarUsuario(email: string, pass: string): Promise<any>
+    + login(user: any): Promise<any>
+    + redefinirSenha(email: string): Promise<void>
+  }
+
+  class UsuarioService {
+    - usuarioRepository: Repository<Usuario>
+    + findAll(): Promise<Usuario[]>
+    + findById(id: number): Promise<Usuario>
+    + findByEmail(email: string): Promise<Usuario|null>
+    + create(dto: CreateUsuarioDto): Promise<any>
+    + update(id: number, dto: UpdateUsuarioDto): Promise<Usuario>
+    + delete(id: number): Promise<void>
+  }
+
+  class DemandaService {
+    - demandaRepository: Repository<Demanda>
+    + create(dto: CreateDemandaDto): Promise<Demanda>
+    + findAll(): Promise<Demanda[]>
+    + findById(id: number): Promise<Demanda>
+    + update(id: number, dto: UpdateDemandaDto): Promise<Demanda>
+    + delete(id: number): Promise<void>
+    + aprovarOuClassificarDemanda(id: number): Promise<Demanda>
+  }
+
+  class TipoDemandaService {
+    - tipoDemandaRepository: Repository<TipoDemanda>
+    + onApplicationBootstrap(): Promise<void>
+    + seed(): Promise<void>
+    + findAll(): Promise<TipoDemanda[]>
+    + findById(id: number): Promise<TipoDemanda>
+    + findByName(nome: string): Promise<TipoDemanda[]>
+    + findComDemandas(ids: number[]): Promise<TipoDemanda[]>
+    + create(dto: CreateTipoDemandaDto): Promise<TipoDemanda>
+    + update(id: number, dto: UpdateTipoDemandaDto): Promise<TipoDemanda>
+    + findOrCreate(nome: string): Promise<TipoDemanda>
+  }
+
+  class CandidaturaService {
+    - candidaturaRepository: Repository<Candidatura>
+    + create(dto: CreateCandidaturaDto): Promise<Candidatura>
+    + updateStatus(id: number, status: CandidaturaStatus): Promise<Candidatura>
+    + desistir(id: number): Promise<void>
+  }
+
+  class ProjetoService {
+    - projetoRepository: Repository<Projeto>
+    - candidaturaRepository: Repository<Candidatura>
+    + findAll(): Promise<Projeto[]>
+    + findById(id: number): Promise<Projeto>
+    + create(dto: CreateProjetoDto): Promise<Projeto>
+    + update(id: number, dto: UpdateProjetoDto): Promise<Projeto>
+    + delete(id: number): Promise<void>
+  }
+
+  class SemestreService {
+    - semestreRepository: Repository<Semestre>
+    + onApplicationBootstrap(): Promise<void>
+    + seed(): Promise<void>
+    + findAll(): Promise<Semestre[]>
+    + findById(id: number): Promise<Semestre>
+    + findComGrupos(ids: number[]): Promise<Semestre[]>
+    + findComDemandas(ids: number[]): Promise<Semestre[]>
+  }
 }
 
-class Usuario {
-  + usuIntId: number
-  + usuStrNome: string
-  + usuStrEmail: string
-  + usuStrSenha: string
-  + usuStrTelefone: string
-  + usuStrTipo: UsuarioTipo
-  + usuBoolAtivo: boolean
+' =========================================================
+' 3. CAMADA DE ENTIDADE (ENTITY)
+' =========================================================
+package "Domain (Entities)" {
+
+  enum UsuarioTipo {
+    Admin
+    Coordenador
+    Empreendedor
+    Grupo
+  }
+
+  enum CandidaturaStatus {
+    Pendente
+    Aceita
+    Recusada
+    Desistente
+  }
+
+  class Usuario {
+    - usuIntId: number
+    - usuStrNome: string
+    - usuStrEmail: string
+    - usuStrSenha: string
+    - usuStrTelefone?: string
+    - usuStrTipo: UsuarioTipo
+    - usuBoolAtivo: boolean
+    + autenticar(): boolean
+    + alternarStatus(): void
+    + atualizarSenha(novaSenha: string): void
+  }
+
+  class Admin {
+    - admIntId: number
+    - admBoolAtivo: boolean
+    - usuIntId: number
+    - usuario: Usuario
+    + auditarSistema(): void
+    + alterarPermissaoUsuario(id: number, tipo: string): void
+  }
+
+  class Coordenador {
+    - cooIntId: number
+    - cooStrMatricula: string
+    - usuIntId: number
+    - usuario: Usuario
+    + vincularSemestre(semestreId: number): void
+    + validarMatricula(): boolean
+  }
+
+  class Empreendedor {
+    - empIntId: number
+    - empStrEmpresa: string
+    - usuIntId: number
+    - usuario: Usuario
+    - demandas: Demanda[]
+    + proporDemanda(demanda: Demanda): void
+    + obterDemandasAtivas(): Demanda[]
+  }
+
+  class Grupo {
+    - gruIntId: number
+    - semIntId: number
+    - usuIntId: number
+    - usuario: Usuario
+    - semestre: Semestre
+    - candidaturas: Candidatura[]
+    + candidatarADemanda(demandaId: number): void
+    + obterHistoricoCandidaturas(): Candidatura[]
+  }
+
+  class Demanda {
+    - demIntId: number
+    - demStrTitulo: string
+    - demBoolAtivo: boolean
+    - demDataCriacao: Date
+    - semIntId: number
+    - empIntId: number
+    - semestre: Semestre
+    - empreendedor: Empreendedor
+    - tiposDemanda: TipoDemanda[]
+    - candidaturas: Candidatura[]
+    + vincularCategoria(tipoId: number): void
+    + desativarDemanda(): void
+  }
+
+  class Projeto {
+    - proIntId: number
+    - proStrDescricao: string
+    - proDateInicio: Date
+    - proBoolAtivo: boolean
+    - canIntId: number
+    - candidatura: Candidatura
+    + iniciarDesenvolvimento(): void
+    + finalizarOuInativar(): void
+  }
+
+  class Candidatura {
+    - canIntId: number
+    - canStrStatus: CandidaturaStatus
+    - gruIntId: number
+    - demIntId: number
+    - grupo: Grupo
+    - demanda: Demanda
+    - projeto?: Projeto
+    + atualizarStatus(novoStatus: CandidaturaStatus): void
+    + aprovarEDevolverProjeto(): Projeto
+  }
+
+  class Semestre {
+    - semIntId: number
+    - semStrDescricao: string
+    - grupos: Grupo[]
+    - demandas: Demanda[]
+    + abrirPeriodoLetivo(): void
+    + encerrarPeriodoLetivo(): void
+  }
+
+  class TipoDemanda {
+    - tipIntId: number
+    - tipStrNome: string
+    - demandas: Demanda[]
+    + atualizarNomeCategoria(nome: string): void
+  }
 }
 
-class Semestre {
-  + semIntId: number
-  + semStrDescricao: string
-}
+' =========================================================
+' RELACIONAMENTOS BOUNDARY -> CONTROL
+' =========================================================
+AuthController --> AuthService
+UsuarioController --> UsuarioService
+DemandaController --> DemandaService
+ProjetoController --> ProjetoService
+CandidaturaController --> CandidaturaService
+SemestreController --> SemestreService
+TipoDemandaController --> TipoDemandaService
 
-class TipoDemanda {
-  + tipIntId: number
-  + tipStrNome: string
-}
+JwtAuthGuard ..> UsuarioController
+RolesGuard ..> UsuarioController
+Roles ..> UsuarioController
 
-class Demanda {
-  + demIntId: number
-  + demStrTitulo: string
-  + demBoolAtivo: boolean
-  + demDataCriacao: Date
-  + semIntId: number
-}
+' DTOs vinculados diretamente
+AuthController ..> LoginDto
+AuthController ..> ResetSenhaDto
+UsuarioController ..> CreateUsuarioDto
+UsuarioController ..> UpdateUsuarioDto
+DemandaController ..> CreateDemandaDto
+DemandaController ..> UpdateDemandaDto
+CandidaturaController ..> CreateCandidaturaDto
+ProjetoController ..> CreateProjetoDto
+ProjetoController ..> UpdateProjetoDto
+TipoDemandaController ..> CreateTipoDemandaDto
+TipoDemandaController ..> UpdateTipoDemandaDto
 
-class Grupo {
-  + gruIntId: number
-  + semIntId: number
-}
+' =========================================================
+' CONTROL -> ENTITY
+' =========================================================
+AuthService --> Usuario : consulta credenciais
+UsuarioService --> Usuario : gerencia
+DemandaService --> Demanda : gerencia
+ProjetoService --> Projeto : gerencia
+ProjetoService --> Candidatura : consulta estado
+CandidaturaService --> Candidatura : gerencia
+SemestreService --> Semestre : gerencia
+TipoDemandaService --> TipoDemanda : gerencia
 
-class Candidatura {
-  + canIntId: number
-  + canStrStatus: CandidaturaStatus
-  + gruIntId: number
-  + demIntId: number
-}
+' =========================================================
+' HERANÇA
+' =========================================================
+Usuario <|-- Admin : estende perfil
+Usuario <|-- Coordenador : estende perfil
+Usuario <|-- Empreendedor : estende perfil
+Usuario <|-- Grupo : estende perfil
 
-class Projeto {
-  + proIntId: number
-  + proStrDescricao: string
-  + proDateInicio: Date
-  + proBoolAtivo: boolean
-  + canIntId: number
-}
+' =========================================================
+' RELACIONAMENTOS DE NEGÓCIO (CARDINALIDADE)
+' =========================================================
+Grupo "1" --> "0..*" Candidatura : manifesta interesse >
+Demanda "1" --> "0..*" Candidatura : recebe intenções >
+Candidatura "0..1" --> "1" Projeto : resulta em >
 
-' Relacionamentos e Associações
-Semestre "1" -- "0..*" Grupo : vincula >
-Semestre "1" -- "0..*" Demanda : possui >
-TipoDemanda "0..*" -- "0..*" Demanda : categoriza >
+Semestre "1" --> "0..*" Grupo : aloca >
+Semestre "1" --> "0..*" Demanda : cronograma >
 
-Grupo "1" -- "0..*" Candidatura : aplica >
-Demanda "1" -- "0..*" Candidatura : recebe >
+Empreendedor "1" --> "0..*" Demanda : propõe >
+TipoDemanda "0..*" --> "0..*" Demanda : classifica >
 
-Candidatura "1" -- "1" Projeto : transforma-se em >
+Usuario ..> UsuarioTipo : tipifica com
+Candidatura ..> CandidaturaStatus : qualifica com
 
 @enduml

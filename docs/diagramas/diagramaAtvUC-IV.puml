@@ -1,0 +1,37 @@
+@startuml UC04_Aprovar_Demandas
+
+<style>
+activityDiagram {
+  FontSize 11
+  Padding 3
+  Margin 2
+  LineColor #2C3E50
+}
+</style>
+skinparam BackgroundColor transparent
+skinparam shadowing false
+
+title UC-04 — Aprovar/Reprovar Demandas (RF-09 / RN-02 / RN-05)
+
+start
+:Coordenador acede à demanda pré-classificada;
+:Revisa os metadados e escopo técnico;
+
+if (Campos críticos de classificação estão preenchidos? (RN-02)) then (não)
+  :Bloquear operação;
+  :Exibir erro "Classificação obrigatória antes da aprovação";
+  end
+else (sim)
+  if (Decisão do Coordenador?) then (Aprovar Demanda)
+    :Alterar status da demanda para "Aprovada";
+    :Disponibilizar card na Galeria Pública (RN-05);
+  else (Reprovar Demanda)
+    :Exigir inserção de parecer técnico / justificativa;
+    :Alterar status da demanda para "Rejeitada";
+    :Disparar notificação por e-mail ao Empreendedor (RN-15);
+  endif
+  :Persistir estado na base de dados Neon;
+  stop
+endif
+
+@enduml
