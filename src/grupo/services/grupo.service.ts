@@ -9,6 +9,7 @@ import { CreateGrupoDto } from '../dto/create-grupo.dto';
 import { UpdateGrupoDto } from '../dto/update-grupo.dto';
 import { StatusCandidatura } from '../../candidatura/dto/status.enum';
 import { MailService } from '../../mail/mail.service'; 
+import { Semestre } from '../../semestre/entities/semestre.entity';
 
 @Injectable()
 export class GrupoService {
@@ -21,7 +22,8 @@ export class GrupoService {
     private readonly demandaRepository: Repository<Demanda>,
     @InjectRepository(Candidatura)
     private readonly candidaturaRepository: Repository<Candidatura>,
-    
+    @InjectRepository(Semestre)
+    private readonly semestreRepository: Repository<Semestre>,
     private readonly mailService: MailService, // 👈 Injetado com sucesso no construtor
   ) {}
 
@@ -67,6 +69,8 @@ export class GrupoService {
       throw new HttpException('Usuário de credencial base não encontrado', HttpStatus.NOT_FOUND);
     }
 
+    const semestre = await this.semestreRepository.findOne({ where: { semIntId: dto.semIntId } });
+
     // Mantendo a validação robusta alinhada ao Regex que você já utiliza no UsuarioService
     const emailInstitucionalRegex = /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
     
@@ -78,17 +82,19 @@ export class GrupoService {
     }
 
     usuario.usuStrTipo = 'Grupo';
+
     await this.usuarioRepository.save(usuario);
 
     const grupo = this.grupoRepository.create({
       gruStrNome: dto.gruStrNome,
       gruStrDescricao: dto.gruStrDescricao,
-      gruStrLider: dto.gruStrLider,
+      gruStrLider: usuario.usuStrNome,
       gruChaRa: dto.gruChaRa,
       gruIntTamanho: dto.gruIntTamanho,
       gruStrMembros: dto.gruStrMembros,
       gruBoolAtivo: true,
       usuario: usuario,
+      semestre: semestre ?? undefined,
     });
 
     return this.grupoRepository.save(grupo);
@@ -99,7 +105,6 @@ export class GrupoService {
 
     if (dto.gruStrNome) grupo.gruStrNome = dto.gruStrNome;
     if (dto.gruStrDescricao) grupo.gruStrDescricao = dto.gruStrDescricao;
-    if (dto.gruStrLider) grupo.gruStrLider = dto.gruStrLider;
     if (dto.gruChaRa) grupo.gruChaRa = dto.gruChaRa;
     if (dto.gruIntTamanho) grupo.gruIntTamanho = dto.gruIntTamanho;
     if (dto.gruStrMembros) grupo.gruStrMembros = dto.gruStrMembros;

@@ -8,6 +8,7 @@ import { Usuario } from '../usuario/entities/usuario.entity';
 import { Demanda } from '../demanda/entities/demanda.entity';
 import { Candidatura } from '../candidatura/entities/candidatura.entity';
 import { MailModule } from '../mail/mail.module'; // 👈 Importação adicionada aqui
+import { Semestre } from '../semestre/entities/semestre.entity';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { MailModule } from '../mail/mail.module'; // 👈 Importação adicionad
       Grupo, 
       Usuario, 
       Demanda, 
-      Candidatura
+      Candidatura,
+      Semestre
     ]),
     MailModule, // 👈 Injetado para dar superpoderes de e-mail ao módulo de grupos
   ],

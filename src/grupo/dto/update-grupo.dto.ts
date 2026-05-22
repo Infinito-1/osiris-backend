@@ -12,10 +12,6 @@ export class UpdateGrupoDto {
 
   @IsOptional()
   @IsString()
-  gruStrLider?: string;
-
-  @IsOptional()
-  @IsString()
   gruChaRa?: string;
 
   @IsOptional()
@@ -37,4 +33,8 @@ export class UpdateGrupoDto {
   @IsOptional()
   @IsNumber()
   usuIntId?: number;
+
+  @IsOptional()
+  @IsNumber()
+  semIntId?: number;
 }
