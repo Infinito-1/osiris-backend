@@ -18,9 +18,16 @@ export class UsuarioController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiResponse({ status: 201, description: 'Cria um novo usuário e devolve rota de destino' })
+  @ApiResponse({ status: 201, description: 'Cria um novo usuário e dispara e-mail de confirmação' })
   create(@Body() dto: CreateUsuarioDto, @Req() req: any): Promise<any> {
     return this.usuarioService.create(dto, req?.user);
+  }
+
+  @Get('confirmar/:token')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, description: 'Confirma a conta do usuário usando o token enviado por e-mail e retorna a rota do painel' })
+  confirmarEmail(@Param('token') token: string): Promise<any> {
+    return this.usuarioService.confirmarEmail(token);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

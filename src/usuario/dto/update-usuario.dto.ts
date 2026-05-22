@@ -23,7 +23,7 @@ export class UpdateUsuarioDto {
   @IsString()
   usuStrTelefone?: string;
 
-  @ApiProperty({ example: 'Admin', description: 'Tipo de usuário', required: false })
+  @ApiProperty({ example: 'Admin', description: 'Tipo de usuário', required: false, enum: ['Empreendedor', 'Coordenador', 'Grupo', 'Admin'] })
   @IsOptional()
   @IsString()
   usuStrTipo?: 'Empreendedor' | 'Coordenador' | 'Grupo' | 'Admin';

@@ -31,28 +31,29 @@ export class EmpreendedorService {
       relations: ['usuario'] 
     });
     if (!empreendedor) {
-      throw new HttpException('Empreendedor não encontrado', HttpStatus.NOT_FOUND);
+      throw new HttpException('Empreendedor corporativo não encontrado', HttpStatus.NOT_FOUND);
     }
     return empreendedor;
   }
 
   async findByUsuarioId(usuarioId: number): Promise<Empreendedor> {
-    const AgraEmpreendedor = await this.empreendedorRepository.findOne({
+    const empreendedor = await this.empreendedorRepository.findOne({
       where: { usuario: { usuIntId: usuarioId } },
       relations: ['usuario'],
     });
-    if (!AgraEmpreendedor) {
-      throw new HttpException('Perfil de empreendedor não encontrado para este utilizador.', HttpStatus.NOT_FOUND);
+    if (!empreendedor) {
+      throw new HttpException('Perfil de empreendedor não vinculado a este usuário.', HttpStatus.NOT_FOUND);
     }
-    return AgraEmpreendedor;
+    return empreendedor;
   }
 
   async create(dto: CreateEmpreendedorDto): Promise<Empreendedor> {
     const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: dto.usuIntId } });
     if (!usuario) {
-      throw new HttpException('Usuário base não encontrado', HttpStatus.NOT_FOUND);
+      throw new HttpException('Usuário de credencial base não encontrado', HttpStatus.NOT_FOUND);
     }
 
+    // Alinha a Role do usuário com o perfil criado no ecossistema
     usuario.usuStrTipo = 'Empreendedor';
     await this.usuarioRepository.save(usuario);
 
@@ -74,7 +75,7 @@ export class EmpreendedorService {
     if (dto.usuIntId) {
       const novoUsuario = await this.usuarioRepository.findOne({ where: { usuIntId: dto.usuIntId } });
       if (!novoUsuario) {
-        throw new HttpException('Novo usuário de associação não encontrado', HttpStatus.NOT_FOUND);
+        throw new HttpException('Usuário informado para troca não existe', HttpStatus.NOT_FOUND);
       }
       empreendedor.usuario = novoUsuario;
     }
@@ -113,11 +114,11 @@ export class EmpreendedorService {
     });
 
     if (!demanda) {
-      throw new HttpException('Demanda não encontrada ou não pertence a este empreendedor', HttpStatus.NOT_FOUND);
+      throw new HttpException('Demanda inexistente ou não associada à sua conta', HttpStatus.NOT_FOUND);
     }
 
     demanda.demBoolAtivo = true;     
-    demanda.demBoolAceitacao = false; 
+    demanda.demBoolAceitacao = false; // Ao reativar, volta obrigatoriamente para a esteira de triagem
 
     return this.demandaRepository.save(demanda);
   }
@@ -133,8 +134,9 @@ export class EmpreendedorService {
       where: { empreendedor: { empIntId: empreendedor.empIntId }, demBoolAceitacao: true, demBoolAtivo: true }
     });
 
+    // Ajustado para garantir que rascunhos desativados não sumam como pendências fantasmas
     const analisePendente = await this.demandaRepository.count({
-      where: { empreendedor: { empIntId: empreendedor.empIntId }, demBoolAceitacao: false }
+      where: { empreendedor: { empIntId: empreendedor.empIntId }, demBoolAceitacao: false, demBoolAtivo: true }
     });
 
     const candidaturasRecebidas = await this.candidaturaRepository.count({

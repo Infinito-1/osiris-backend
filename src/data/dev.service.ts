@@ -11,10 +11,11 @@ export class DevService implements TypeOrmOptionsFactory {
       username: process.env.DB_USERNAME || 'postgres',
       password: process.env.DB_PASSWORD || 'root',
       database: process.env.DB_DATABASE || 'db_osiris',
-      autoLoadEntities: true,
-      synchronize: false,
+      autoLoadEntities: true, // Excelente: dispensa mapear entidades na mão aqui
+      synchronize: false,    // Correto: produção e dev devem usar migrations para consistência
       logging: true,
-      migrations: [__dirname + '/../migrations/**/*.js'],
+      migrations: [__dirname + '/../../migrations/**/*.{ts,js}'], // Ajustado o nível da pasta e aceitação de TS/JS
+      migrationsRun: true,   // Opcional: roda as migrações automaticamente ao iniciar o app em dev
     };
   }
 }

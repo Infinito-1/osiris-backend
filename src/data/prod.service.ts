@@ -12,7 +12,8 @@ export class ProdService implements TypeOrmOptionsFactory {
       ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
       synchronize: false,
       autoLoadEntities: true,
-      migrations: [__dirname + '/../migrations/**/*.js'],
+      migrations: [__dirname + '/../../migrations/**/*.js'], // Ajustado o nível de subida da pasta para o build (dist/)
+      migrationsRun: false,  // Em produção, o ideal é rodar via script de CI/CD.
     };
   }
 }

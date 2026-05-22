@@ -9,6 +9,7 @@ import { CreateCoordenadorDto } from '../dto/create-coordenador.dto';
 import { UpdateCoordenadorDto } from '../dto/update-coordenador.dto';
 import { ClassificarDemandaDto } from '../dto/classificar-demanda.dto';
 import { GerenciarCandidaturaDto } from '../dto/gerenciar-candidatura.dto';
+import { MailService } from '../../mail/mail.service';
 
 @Injectable()
 export class CoordenadorService {
@@ -21,6 +22,7 @@ export class CoordenadorService {
     private readonly demandaRepository: Repository<Demanda>,
     @InjectRepository(Candidatura)
     private readonly candidaturaRepository: Repository<Candidatura>,
+    private readonly mailService: MailService,
   ) {}
 
   async findAll(): Promise<Coordenador[]> {
@@ -137,7 +139,11 @@ export class CoordenadorService {
   }
 
   async aprovarDemanda(demIntId: number): Promise<Demanda> {
-    const demanda = await this.demandaRepository.findOne({ where: { demIntId } });
+    const demanda = await this.demandaRepository.findOne({ 
+      where: { demIntId },
+      relations: ['empreendedor', 'empreendedor.usuario']
+    });
+
     if (!demanda) {
       throw new HttpException('Demanda informada para aprovação não encontrada', HttpStatus.NOT_FOUND);
     }
@@ -152,13 +158,26 @@ export class CoordenadorService {
     demanda.demBoolAceitacao = true; 
     demanda.demBoolAtivo = true;     
 
-    return this.demandaRepository.save(demanda);
+    const demandaSalva = await this.demandaRepository.save(demanda);
+
+    if (demanda.empreendedor?.usuario?.usuStrEmail) {
+      try {
+        await this.mailService.sendDemandaAprovadaEmail(
+          demanda.empreendedor.usuario.usuStrEmail,
+          demanda.demStrNome,
+        );
+      } catch (error) {
+        console.error('Falha ao enviar e-mail de notificação de aprovação:', error);
+      }
+    }
+
+    return demandaSalva;
   }
 
   async gerenciarCandidaturas(dto: GerenciarCandidaturaDto): Promise<Candidatura> {
     const candidatura = await this.candidaturaRepository.findOne({ 
       where: { canIntId: dto.candidaturaId },
-      relations: ['demanda']
+      relations: ['demanda', 'grupo', 'grupo.usuario']
     });
 
     if (!candidatura) {
@@ -166,13 +185,28 @@ export class CoordenadorService {
     }
 
     candidatura.canStrStatus = dto.status;
+    candidatura.canBoolAprovacao = dto.status === 'Aceita';
 
     if (dto.status === 'Aceita' && candidatura.demanda) {
       candidatura.demanda.demBoolAceitacao = true;
       await this.demandaRepository.save(candidatura.demanda);
     }
 
-    return this.candidaturaRepository.save(candidatura);
+    const candidaturaSalva = await this.candidaturaRepository.save(candidatura);
+
+    if (candidatura.grupo?.usuario?.usuStrEmail) {
+      try {
+        await this.mailService.sendStatusCandidaturaEmail(
+          candidatura.grupo.usuario.usuStrEmail,
+          candidatura.demanda?.demStrNome || 'Demanda Vinculada',
+          dto.status,
+        );
+      } catch (error) {
+        console.error('Falha ao enviar e-mail de alteração de status da candidatura:', error);
+      }
+    }
+
+    return candidaturaSalva;
   }
 
   async getDashboardDados(usuarioId: number): Promise<any> {

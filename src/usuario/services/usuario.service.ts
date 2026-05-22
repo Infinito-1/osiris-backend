@@ -2,15 +2,18 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { Usuario } from '../entities/usuario.entity';
 import { CreateUsuarioDto } from '../dto/create-usuario.dto';
 import { UpdateUsuarioDto } from '../dto/update-usuario.dto';
+import { MailService } from '../../mail/mail.service';
 
 @Injectable()
 export class UsuarioService {
   constructor(
     @InjectRepository(Usuario)
     private readonly usuarioRepository: Repository<Usuario>,
+    private readonly mailService: MailService,
   ) {}
 
   async findAll(): Promise<Usuario[]> {
@@ -35,6 +38,7 @@ export class UsuarioService {
       throw new HttpException('Email já cadastrado', HttpStatus.CONFLICT);
     }
 
+    // Regra: Líderes de grupo precisam de e-mail institucional CPS
     if (dto.usuStrTipo === 'Grupo') {
       const emailInstitucionalRegex = /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
       if (!emailInstitucionalRegex.test(dto.usuStrEmail)) {
@@ -45,6 +49,7 @@ export class UsuarioService {
       }
     }
 
+    // Regra: Apenas Admin cria Coordenador
     if (dto.usuStrTipo === 'Coordenador' && requester?.role !== 'Admin') {
       throw new HttpException(
         'Apenas administradores do sistema podem criar contas do tipo Coordenador.',
@@ -54,29 +59,55 @@ export class UsuarioService {
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(dto.usuStrSenha, salt);
+    const tokenConfirmacao = crypto.randomBytes(32).toString('hex');
 
     const novoUsuario = this.usuarioRepository.create({
       ...dto,
       usuStrSenha: hashedPassword,
+      usuBoolAtivo: false, // Fica inativo até confirmar por e-mail
+      usuBoolConfirmado: false,
+      usuStrTokenConfirmacao: tokenConfirmacao,
     });
 
     const usuarioSalvo = await this.usuarioRepository.save(novoUsuario);
 
-    let rotaRedirecionamento = '/grupos/dashboard';
-    if (usuarioSalvo.usuStrTipo === 'Empreendedor') rotaRedirecionamento = '/empreendedores/dashboard';
-    if (usuarioSalvo.usuStrTipo === 'Coordenador') rotaRedirecionamento = '/coordenadores/dashboard';
-    if (usuarioSalvo.usuStrTipo === 'Admin') rotaRedirecionamento = '/admin/dashboard';
+    // Dispara o e-mail assincronamente
+    await this.mailService.sendConfirmationEmail(usuarioSalvo.usuStrEmail, tokenConfirmacao);
 
     return {
       statusCode: HttpStatus.CREATED,
-      message: 'Usuário cadastrado com sucesso no Osiris!',
-      redirectTo: rotaRedirecionamento,
+      message: 'Usuário cadastrado com sucesso no Osiris! Por favor, verifique seu e-mail para confirmar a conta.',
       dados: {
         id: usuarioSalvo.usuIntId,
         nome: usuarioSalvo.usuStrNome,
         email: usuarioSalvo.usuStrEmail,
         tipo: usuarioSalvo.usuStrTipo,
       }
+    };
+  }
+
+  async confirmarEmail(token: string): Promise<any> {
+    const usuario = await this.usuarioRepository.findOne({ where: { usuStrTokenConfirmacao: token } });
+    
+    if (!usuario) {
+      throw new HttpException('Token de confirmação inválido ou expirado.', HttpStatus.BAD_REQUEST);
+    }
+
+    usuario.usuBoolConfirmado = true;
+    usuario.usuBoolAtivo = true;
+    usuario.usuStrTokenConfirmacao = null; // Limpa o token utilizado
+
+    await this.usuarioRepository.save(usuario);
+
+    let rotaRedirecionamento = '/grupos/dashboard';
+    if (usuario.usuStrTipo === 'Empreendedor') rotaRedirecionamento = '/empreendedores/dashboard';
+    if (usuario.usuStrTipo === 'Coordenador') rotaRedirecionamento = '/coordenadores/dashboard';
+    if (usuario.usuStrTipo === 'Admin') rotaRedirecionamento = '/admin/dashboard';
+
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Conta ativada e confirmada com sucesso no Osiris!',
+      redirectTo: rotaRedirecionamento,
     };
   }
 
@@ -90,7 +121,7 @@ export class UsuarioService {
       );
     }
 
-    if (dto.usuStrTipo && (dto.usuStrTipo === 'Coordenador' || (dto.usuStrTipo as string) === 'Admin') && requester.role !== 'Admin') {
+    if (dto.usuStrTipo && (dto.usuStrTipo === 'Coordenador' || dto.usuStrTipo === 'Admin') && requester.role !== 'Admin') {
       throw new HttpException(
         'Somente administradores podem atribuir papéis de nível administrativo.',
         HttpStatus.FORBIDDEN,

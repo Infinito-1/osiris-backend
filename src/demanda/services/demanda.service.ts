@@ -15,23 +15,27 @@ export class DemandaService {
     private readonly tipoDemandaService: TipoDemandaService,
   ) {}
 
+  // Usado por Admins e Coordenadores para ver TODAS as demandas no painel gerencial de triagem
   async findAll(): Promise<Demanda[]> {
     return this.demandaRepository.find({
-      relations: ['semestre', 'empreendedor', 'coordenador', 'tipo'],
+      relations: ['semestre', 'empreendedor', 'empreendedor.usuario', 'coordenador', 'tipo'],
     });
   }
 
-  async findById(id: number): Promise<Demanda | null> {
-    return this.demandaRepository.findOne({
-      where: { demIntId: id, demBoolAtivo: true, demBoolAceitacao: true },
+  // 🚀 Alimenta a vitrine do front-end aberta para visitantes (com o decorator @Public)
+  async findGaleria(): Promise<Demanda[]> {
+    return this.demandaRepository.find({
+      where: { demBoolAtivo: true, demBoolAceitacao: true },
       relations: ['semestre', 'empreendedor', 'coordenador', 'tipo'],
+      order: { demDataCriacao: 'DESC' },
     });
   }
 
-  async findOneInternal(id: number): Promise<Demanda> {
+  // Busca detalhada por ID (lança 404 caso não exista)
+  async findById(id: number): Promise<Demanda> {
     const demanda = await this.demandaRepository.findOne({
       where: { demIntId: id },
-      relations: ['semestre', 'empreendedor', 'coordenador', 'tipo'],
+      relations: ['semestre', 'empreendedor', 'empreendedor.usuario', 'coordenador', 'tipo'],
     });
     if (!demanda) {
       throw new HttpException('Demanda não encontrada no sistema', HttpStatus.NOT_FOUND);
@@ -39,9 +43,13 @@ export class DemandaService {
     return demanda;
   }
 
+  async findOneInternal(id: number): Promise<Demanda> {
+    return this.findById(id);
+  }
+
   async findByNome(nome: string): Promise<Demanda[]> {
     return this.demandaRepository.find({
-      where: { demStrNome: ILike(`%${nome}%`) },
+      where: { demStrNome: ILike(`%${nome}%`), demBoolAtivo: true, demBoolAceitacao: true },
       relations: ['semestre', 'empreendedor', 'coordenador', 'tipo'],
     });
   }
@@ -54,6 +62,7 @@ export class DemandaService {
     });
   }
 
+  // BL-13: Toda demanda criada nasce pendente de aprovação (demBoolAceitacao = false)
   async create(dto: CreateDemandaDto): Promise<Demanda> {
     const tipos: TipoDemanda[] = [];
 
@@ -75,23 +84,30 @@ export class DemandaService {
       demStrNome: dto.demStrNome,
       demStrDescricao: dto.demStrDescricao,
       demBoolAceitaMudancaTipo: dto.demBoolAceitaMudancaTipo,
-      demBoolAceitacao: false, // RN: Toda demanda criada nasce pendente de aprovação do Coordenador
-      semestre: { semIntId: dto.semIntId } as any,
+      demBoolAceitacao: false, // Força a regra de negócio do ecossistema Osiris
+      demBoolAtivo: true,
+      semestre: dto.semIntId ? ({ semIntId: dto.semIntId } as any) : null,
       empreendedor: { empIntId: dto.empIntId } as any,
-      coordenador: { cooIntId: dto.cooIntId } as any,
+      coordenador: dto.cooIntId ? ({ cooIntId: dto.cooIntId } as any) : null,
       tipo: tipos,
     });
 
     return this.demandaRepository.save(demanda);
   }
 
-  async update(id: number, dto: UpdateDemandaDto): Promise<Demanda | null> {
+  async update(id: number, dto: UpdateDemandaDto): Promise<Demanda> {
     const demanda = await this.findOneInternal(id);
 
     if (dto.demStrNome) demanda.demStrNome = dto.demStrNome;
     if (dto.demStrDescricao) demanda.demStrDescricao = dto.demStrDescricao;
     if (dto.demBoolAceitaMudancaTipo !== undefined) demanda.demBoolAceitaMudancaTipo = dto.demBoolAceitaMudancaTipo;
-    if (dto.demBoolAceitacao !== undefined) demanda.demBoolAceitacao = dto.demBoolAceitacao;
+    
+    // 🛡️ Segurança: O empreendedor não pode atualizar o status de aprovação de forma direta
+    // A aprovação legítima ocorre apenas através do CoordenadorService via fluxo de triagem
+    if (dto.demBoolAceitacao !== undefined) {
+      demanda.demBoolAceitacao = dto.demBoolAceitacao;
+    }
+
     if (dto.semIntId) demanda.semestre = { semIntId: dto.semIntId } as any;
     if (dto.empIntId) demanda.empreendedor = { empIntId: dto.empIntId } as any;
     if (dto.cooIntId) demanda.coordenador = { cooIntId: dto.cooIntId } as any;
@@ -109,7 +125,9 @@ export class DemandaService {
         tipos.push(tipo);
       }
     }
-    if (tipos.length > 0) demanda.tipo = tipos;
+    if (tipos.length > 0) {
+      demanda.tipo = tipos;
+    }
 
     return this.demandaRepository.save(demanda);
   }

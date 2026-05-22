@@ -31,7 +31,7 @@ export class Grupo {
 
   @IsNotEmpty()
   @Column({ name: 'gru_int_lider', length: 70, nullable: false })
-  gruIntLider!: string;
+  gruStrLider!: string; // 🛠️ Corrigido o tipo para string refletindo o nome do líder
 
   @IsNotEmpty()
   @Column({ name: 'gru_cha_ra', length: 13, nullable: false })

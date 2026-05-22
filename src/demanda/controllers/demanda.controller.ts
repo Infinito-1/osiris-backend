@@ -7,21 +7,33 @@ import { Demanda } from '../entities/demanda.entity';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { RolesGuard } from '../../auth/roles.guard'; 
 import { Roles } from '../../auth/roles.decorator'; 
+import { Public } from '../../auth/public.decorator'; // Importando o novo decorador
+import { ApiTags, ApiResponse, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { CreateDemandaDto } from '../dto/create-demanda.dto';
 import { UpdateDemandaDto } from '../dto/update-demanda.dto';
-import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Demandas')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard) // 🔒 Deixamos a segurança global ativa novamente para a classe toda
 @Controller('demandas')
 export class DemandaController {
   constructor(private readonly demandaService: DemandaService) {}
 
-  @Get()
-  @Roles('Coordenador', 'Empreendedor', 'Grupo', 'Admin')
+  @Public() // 🌍 Abre a exceção: Essa rota ignora os Guards lá de cima e aceita não logados!
+  @Get('galeria')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Lista todas as demandas' })
+  @ApiOperation({ summary: 'Listar demandas aprovadas e ativas para a vitrine pública (Acesso Livre)' })
+  @ApiResponse({ status: 200, description: 'Retorna a galeria pública filtrada.' })
+  findGaleria(): Promise<Demanda[]> {
+    return this.demandaService.findGaleria();
+  }
+
+  // Como a classe está protegida globalmente, as rotas abaixo NÃO precisam repetir os @UseGuards:
+  
+  @Get()
+  @Roles('Coordenador', 'Admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Listar todas as demandas cadastradas (Painel de Triagem Gerencial)' })
   findAll(): Promise<Demanda[]> {
     return this.demandaService.findAll();
   }
@@ -29,33 +41,20 @@ export class DemandaController {
   @Get('ordenado')
   @Roles('Coordenador', 'Empreendedor', 'Grupo', 'Admin')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Lista todas as demandas ordenadas por data' })
-  findAllOrdenado(
-    @Query('ordem') ordem: 'ASC' | 'DESC' = 'ASC',
-  ): Promise<Demanda[]> {
+  findAllOrdenado(@Query('ordem') ordem: 'ASC' | 'DESC' = 'ASC'): Promise<Demanda[]> {
     return this.demandaService.findAllData(ordem);
   }
 
   @Get(':id')
   @Roles('Coordenador', 'Empreendedor', 'Grupo', 'Admin')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Busca uma demanda pelo ID' })
-  findById(@Param('id', ParseIntPipe) id: number): Promise<Demanda | null> {
+  findById(@Param('id', ParseIntPipe) id: number): Promise<Demanda> {
     return this.demandaService.findById(id);
   }
 
-  @Get('nome/:nome')
-  @Roles('Coordenador', 'Empreendedor', 'Grupo', 'Admin')
-  @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Busca demandas pelo nome' })
-  findByNome(@Param('nome') nome: string): Promise<Demanda[]> {
-    return this.demandaService.findByNome(nome);
-  }
-
   @Post()
-  @Roles('Coordenador', 'Empreendedor', 'Admin')
+  @Roles('Empreendedor', 'Admin')
   @HttpCode(HttpStatus.CREATED)
-  @ApiResponse({ status: 201, description: 'Cria uma nova demanda' })
   create(@Body() dto: CreateDemandaDto): Promise<Demanda> {
     return this.demandaService.create(dto);
   }
@@ -63,18 +62,13 @@ export class DemandaController {
   @Put(':id')
   @Roles('Coordenador', 'Empreendedor', 'Admin')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Atualiza uma demanda existente' })
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateDemandaDto,
-  ): Promise<Demanda | null> {
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateDemandaDto): Promise<Demanda> {
     return this.demandaService.update(id, dto);
   }
 
   @Put('desativar/:id')
   @Roles('Coordenador', 'Empreendedor', 'Admin')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Desativa uma demanda existente' })
   desativar(@Param('id', ParseIntPipe) id: number): Promise<Demanda> {
     return this.demandaService.desativar(id);
   }
@@ -82,7 +76,6 @@ export class DemandaController {
   @Delete(':id')
   @Roles('Admin')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiResponse({ status: 204, description: 'Remove uma demanda definitivamente (somente admin)' })
   delete(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.demandaService.delete(id);
   }

@@ -5,6 +5,7 @@ import { Projeto } from '../entities/projeto.entity';
 import { Candidatura } from '../../candidatura/entities/candidatura.entity';
 import { CreateProjetoDto } from '../dto/create-projeto.dto';
 import { UpdateProjetoDto } from '../dto/update-projeto.dto';
+import { StatusCandidatura } from '../../candidatura/dto/status.enum';
 
 @Injectable()
 export class ProjetoService {
@@ -29,18 +30,39 @@ export class ProjetoService {
     });
 
     if (!projeto) {
-      throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
+      throw new HttpException('Projeto acadêmico não encontrado no Osiris', HttpStatus.NOT_FOUND);
     }
     return projeto;
   }
 
   async create(dto: CreateProjetoDto): Promise<Projeto> {
+    // 1. Busca a candidatura base
     const candidatura = await this.candidaturaRepository.findOne({
       where: { canIntId: dto.canIntId }
     });
 
     if (!candidatura) {
-      throw new HttpException('Candidatura base não encontrada', HttpStatus.NOT_FOUND);
+      throw new HttpException('Candidatura base não encontrada no ecossistema', HttpStatus.NOT_FOUND);
+    }
+
+    //  Compara estritamente com o Enum para evitar o erro TS2367
+    if (candidatura.canStrStatus !== StatusCandidatura.Aceita) {
+      throw new HttpException(
+        `Não é possível iniciar um projeto. A candidatura encontra-se em estado: ${candidatura.canStrStatus}. Ela precisa ser "Aceita" primeiro.`,
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    //  Impede duplicidade de projetos ativos para a mesma candidatura
+    const projetoExistente = await this.projetoRepository.findOne({
+      where: { candidatura: { canIntId: dto.canIntId }, proBoolAtivo: true }
+    });
+
+    if (projetoExistente) {
+      throw new HttpException(
+        'Operação bloqueada: Já existe um projeto ativo em andamento para esta candidatura.',
+        HttpStatus.CONFLICT
+      );
     }
 
     const projeto = this.projetoRepository.create({
@@ -63,9 +85,10 @@ export class ProjetoService {
       const candidatura = await this.candidaturaRepository.findOne({
         where: { canIntId: dto.canIntId }
       });
-      if (candidatura) {
-        projeto.candidatura = candidatura;
+      if (!candidatura) {
+        throw new HttpException('A nova candidatura informada não existe', HttpStatus.NOT_FOUND);
       }
+      projeto.candidatura = candidatura;
     }
 
     return this.projetoRepository.save(projeto);
@@ -73,7 +96,7 @@ export class ProjetoService {
 
   async delete(id: number): Promise<void> {
     const projeto = await this.findById(id);
-    projeto.proBoolAtivo = false;
+    projeto.proBoolAtivo = false; // Soft delete mantido
     await this.projetoRepository.save(projeto);
   }
 }

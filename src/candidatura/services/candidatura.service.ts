@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Candidatura } from '../entities/candidatura.entity';
@@ -28,14 +28,27 @@ export class CandidaturaService {
     });
   }
 
-  async findById(id: number): Promise<Candidatura> {
+  // RN-10: Valida se quem está buscando a candidatura tem direito de visualizá-la
+  async findById(id: number, userRequest?: { id: number; role: string }): Promise<Candidatura> {
     const candidatura = await this.candidaturaRepository.findOne({
       where: { canIntId: id },
-      relations: ['coordenador', 'demanda', 'grupo'],
+      relations: ['coordenador', 'demanda', 'grupo', 'grupo.usuario', 'demanda.empreendedor'],
     });
+
     if (!candidatura) {
       throw new HttpException('Candidatura não encontrada', HttpStatus.NOT_FOUND);
     }
+
+    // Regra de Isolamento (RN-10): Grupos só veem suas próprias candidaturas
+    if (userRequest && userRequest.role === 'Grupo') {
+      const grupoDono = await this.grupoRepository.findOne({
+        where: { usuario: { usuIntId: userRequest.id } }
+      });
+      if (!grupoDono || candidatura.grupo.gruIntId !== grupoDono.gruIntId) {
+        throw new UnauthorizedException('Você não tem permissão para visualizar candidaturas de outros grupos.');
+      }
+    }
+
     return candidatura;
   }
 
@@ -65,6 +78,7 @@ export class CandidaturaService {
       throw new HttpException('Grupo ou Demanda base não encontrados para consolidação', HttpStatus.NOT_FOUND);
     }
 
+    // Garante que não criará duplicado para candidaturas vigentes
     const existente = await this.candidaturaRepository.findOne({
       where: {
         grupo: { gruIntId: grupo.gruIntId },
@@ -72,49 +86,76 @@ export class CandidaturaService {
       },
     });
 
-    if (existente) {
+    if (existente && existente.canStrStatus !== StatusCandidatura.Desistente) {
       throw new HttpException('O seu grupo já possui uma candidatura ativa para esta demanda', HttpStatus.BAD_REQUEST);
     }
 
-    const coordenadorAlvo = dto.cooIntId 
-      ? await this.coordenadorRepository.findOne({ where: { cooIntId: dto.cooIntId } }) 
-      : undefined;
-
     const candidatura = this.candidaturaRepository.create({
       canStrStatus: StatusCandidatura.Pendente,
-      canBoolAprovacao: dto.canBoolAprovacao || false,
+      canBoolAprovacao: false, // Forçado falso no início. Depende do fluxo do coordenador (RN-06)
       demanda: demanda,
       grupo: grupo,
-      coordenador: coordenadorAlvo || undefined
     });
 
     return this.candidaturaRepository.save(candidatura);
   }
 
   async update(id: number, dto: UpdateCandidaturaDto): Promise<Candidatura> {
-    const candidatura = await this.findById(id);
+    const candidatura = await this.candidaturaRepository.findOne({
+      where: { canIntId: id },
+      relations: ['coordenador', 'demanda', 'grupo']
+    });
+    
+    if (!candidatura) {
+      throw new HttpException('Candidatura não encontrada', HttpStatus.NOT_FOUND);
+    }
 
-    if (dto.canStrStatus) candidatura.canStrStatus = dto.canStrStatus;
-    if (dto.canBoolAprovacao !== undefined) candidatura.canBoolAprovacao = dto.canBoolAprovacao;
+    // Regra de integridade do Status (RN-06)
+    if (dto.canStrStatus) {
+      candidatura.canStrStatus = dto.canStrStatus;
+      candidatura.canBoolAprovacao = dto.canStrStatus === StatusCandidatura.Aceita;
+    }
     
     if (dto.cooIntId) {
       const coo = await this.coordenadorRepository.findOne({ where: { cooIntId: dto.cooIntId } });
-      if (coo) candidatura.coordenador = coo || undefined;
-    }
-    if (dto.demIntId) {
-      const dem = await this.demandaRepository.findOne({ where: { demIntId: dto.demIntId } });
-      if (dem) candidatura.demanda = dem;
-    }
-    if (dto.gruIntId) {
-      const gru = await this.grupoRepository.findOne({ where: { gruIntId: dto.gruIntId } });
-      if (gru) candidatura.grupo = gru;
+      if (coo) candidatura.coordenador = coo;
     }
 
     return this.candidaturaRepository.save(candidatura);
   }
 
+  // RN-14 & RF-19: Fluxo de Desistência acionado pelo próprio Grupo Logado
+  async desistir(id: number, usuarioLogadoId: number): Promise<Candidatura> {
+    const grupoDono = await this.grupoRepository.findOne({
+      where: { usuario: { usuIntId: usuarioLogadoId } }
+    });
+
+    if (!grupoDono) {
+      throw new UnauthorizedException('Usuário logado não possui um grupo vinculado.');
+    }
+
+    const candidatura = await this.candidaturaRepository.findOne({
+      where: { canIntId: id },
+      relations: ['grupo']
+    });
+
+    if (!candidatura) {
+      throw new HttpException('Candidatura não encontrada', HttpStatus.NOT_FOUND);
+    }
+
+    if (candidatura.grupo.gruIntId !== grupoDono.gruIntId) {
+      throw new UnauthorizedException('Você só pode desistir de candidaturas do seu próprio grupo.');
+    }
+
+    candidatura.canStrStatus = StatusCandidatura.Desistente;
+    candidatura.canBoolAprovacao = false;
+    return this.candidaturaRepository.save(candidatura);
+  }
+
   async delete(id: number): Promise<void> {
-    const candidatura = await this.findById(id);
+    const candidatura = await this.candidaturaRepository.findOne({ where: { canIntId: id } });
+    if (!candidatura) throw new HttpException('Candidatura não encontrada', HttpStatus.NOT_FOUND);
+    
     candidatura.canStrStatus = StatusCandidatura.Recusada;
     await this.candidaturaRepository.save(candidatura);
   }

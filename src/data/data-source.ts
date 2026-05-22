@@ -26,6 +26,6 @@ export const AppDataSource = new DataSource(
         logging: true,
         synchronize: false,
         entities: [__dirname + '/../**/*.entity.{ts,js}'],
-        migrations: [__dirname + '/../migrations/**/*.{ts,js}'],
+        migrations: [__dirname + '/../migrations/**/*.{ts,js}'], // Suporta TS local e JS buildado
       }
 );

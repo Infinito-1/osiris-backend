@@ -11,7 +11,8 @@ export class Admin {
   @Column({ name: 'adm_bool_ativo', default: true })
   admBoolAtivo!: boolean;
 
-  @OneToOne(() => Usuario, { eager: true })
+  // Ajustado com regras de integridade relacional cascade
+  @OneToOne(() => Usuario, { eager: true, onDelete: 'CASCADE', onUpdate: 'CASCADE' })
   @JoinColumn({ name: 'usu_int_id' })
   usuario!: Usuario;
 }

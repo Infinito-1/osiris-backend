@@ -9,6 +9,7 @@ import { CreateAdminDto } from '../dto/create-admin.dto';
 import { UpdateAdminDto } from '../dto/update-admin.dto';
 import { UpdatePapelDto } from '../dto/update-papel.dto';
 import { UpdateDemandaDto } from '../../demanda/dto/update-demanda.dto';
+import { MailService } from '../../mail/mail.service';
 
 @Injectable()
 export class AdminService {
@@ -24,6 +25,7 @@ export class AdminService {
     private readonly demandaRepository: Repository<Demanda>,
     @InjectRepository(Projeto)
     private readonly projetoRepository: Repository<Projeto>,
+    private readonly mailService: MailService, // Injetado para cumprir RF-20 e RN-15
   ) {}
 
   private async registrarAuditoria(acao: string, detalhes: string) {
@@ -32,10 +34,17 @@ export class AdminService {
     console.log(`[AUDITORIA] ${acao} - ${detalhes}`);
   }
 
-  private async notificarAlteracao(mensagem: string) {
-    const notificacao = { mensagem, data: new Date().toISOString() };
+  private async notificarAlteracao(emailDestino: string, mensagem: string) {
+    const notificacao = { emailDestino, mensagem, data: new Date().toISOString() };
     this.notificationsLogs.push(notificacao);
-    console.log(`[NOTIFICAÇÃO VIA API EMAIL] ${mensagem}`);
+    console.log(`[NOTIFICAÇÃO] Para: ${emailDestino} - ${mensagem}`);
+    
+    // Dispara a notificação real usando a infraestrutura do MailModule
+    try {
+      await this.mailService.sendConfirmationEmail(emailDestino, `Notificação Osiris: ${mensagem}`);
+    } catch (error) {
+      console.error(`Falha ao disparar e-mail de notificação para ${emailDestino}:`, error);
+    }
   }
 
   async criarAdmin(dto: CreateAdminDto): Promise<Admin> {
@@ -60,7 +69,7 @@ export class AdminService {
     const novoAdmin = await this.adminRepository.save(admin);
 
     await this.registrarAuditoria('Criar Admin', `Usuário ID=${usuarioId} promovido a Admin`);
-    await this.notificarAlteracao(`Usuário ${usuario.usuStrEmail} foi promovido a administrador.`);
+    await this.notificarAlteracao(usuario.usuStrEmail, 'Sua conta foi promovida ao papel de Administrador no ecossistema Osiris.');
 
     return novoAdmin;
   }
@@ -88,6 +97,17 @@ export class AdminService {
     const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: usuarioId } });
     if (!usuario) throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
 
+    // RN-19: Validação caso o administrador esteja transformando o usuário em um Líder de Grupo
+    if (novoPapel === 'Grupo') {
+      const emailInstitucionalRegex = /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
+      if (!emailInstitucionalRegex.test(usuario.usuStrEmail)) {
+        throw new HttpException(
+          'Incompatibilidade de papel: O usuário alvo não possui um e-mail institucional CPS válido para se tornar um perfil Grupo.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+
     if (usuario.usuStrTipo === 'Admin') {
       const adminReg = await this.adminRepository.findOne({ where: { usuario: { usuIntId: usuarioId } } });
       if (adminReg) {
@@ -99,7 +119,7 @@ export class AdminService {
     const atualizado = await this.usuarioRepository.save(usuario);
 
     await this.registrarAuditoria('Atualizar Papel', `Usuário ID=${usuarioId} alterado para papel: ${novoPapel}`);
-    await this.notificarAlteracao(`O perfil do usuário ${usuario.usuStrEmail} foi modificado para ${novoPapel}.`);
+    await this.notificarAlteracao(usuario.usuStrEmail, `O perfil da sua conta foi modificado administrativamente para ${novoPapel}.`);
 
     return atualizado;
   }
@@ -127,7 +147,7 @@ export class AdminService {
 
     await this.registrarAuditoria('Inativar Admin', `Admin ID=${id} e seu utilizador base foram inativados`);
     if (admin.usuario) {
-      await this.notificarAlteracao(`Administrador ${admin.usuario.usuStrEmail} foi inativado.`);
+      await this.notificarAlteracao(admin.usuario.usuStrEmail, 'Sua credencial administrativa e acesso à plataforma foram desativados.');
     }
   }
 
@@ -146,7 +166,7 @@ export class AdminService {
 
     await this.registrarAuditoria('Reativar Admin', `Admin ID=${id} reativado com sucesso`);
     if (admin.usuario) {
-      await this.notificarAlteracao(`Administrador ${admin.usuario.usuStrEmail} foi reativado.`);
+      await this.notificarAlteracao(admin.usuario.usuStrEmail, 'Seu acesso de administrador à plataforma Osiris foi restabelecido.');
     }
 
     return admin;
@@ -164,7 +184,7 @@ export class AdminService {
     await this.usuarioRepository.save(usuario);
 
     await this.registrarAuditoria('Inativar Usuário', `Utilizador ID=${id} foi inativado pelo administrador`);
-    await this.notificarAlteracao(`O utilizador ${usuario.usuStrEmail} foi desativado da plataforma.`);
+    await this.notificarAlteracao(usuario.usuStrEmail, 'Sua conta na plataforma Osiris foi temporariamente desativada pela administração.');
   }
 
   async reativarUsuario(id: number): Promise<Usuario> {
@@ -175,7 +195,7 @@ export class AdminService {
     await this.usuarioRepository.save(usuario);
 
     await this.registrarAuditoria('Reativar Usuário', `Utilizador ID=${id} reativado pelo administrador`);
-    await this.notificarAlteracao(`O utilizador ${usuario.usuStrEmail} teve seu acesso restabelecido.`);
+    await this.notificarAlteracao(usuario.usuStrEmail, 'Sua conta na plataforma Osiris foi reativada. Você já pode efetuar login novamente.');
 
     return usuario;
   }
@@ -187,9 +207,7 @@ export class AdminService {
     Object.assign(demanda, dados);
     const demandaAtualizada = await this.demandaRepository.save(demanda);
 
-    await this.registrarAuditoria('Gerenciar Demanda', `Demanda ID=${id} updated administratively`);
-    await this.notificarAlteracao(`A demanda ID ${id} sofreu alterações de dados por um administrador.`);
-
+    await this.registrarAuditoria('Gerenciar Demanda', `Demanda ID=${id} atualizada administrativamente`);
     return demandaAtualizada;
   }
 
@@ -205,20 +223,18 @@ export class AdminService {
     const demandaModerada = await this.demandaRepository.save(demanda);
 
     await this.registrarAuditoria('Moderação de Conteúdo', `Demanda ID=${id} suspensa. Motivo: ${parecerTecnico}`);
-    await this.notificarAlteracao(`Infração de Conteúdo: A demanda ID ${id} foi suspensa para revisão.`);
 
     return demandaModerada;
   }
 
   async inativarProjeto(id: number): Promise<void> {
-    const projeto = await this.projetoRepository.findOne({ where: { proIntId: id } });
-    if (!projeto) throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
+    const proyecto = await this.projetoRepository.findOne({ where: { proIntId: id } });
+    if (!proyecto) throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
 
-    projeto.proBoolAtivo = false;
-    await this.projetoRepository.save(projeto);
+    proyecto.proBoolAtivo = false;
+    await this.projetoRepository.save(proyecto);
 
     await this.registrarAuditoria('Inativar Projeto', `Projeto ID=${id} definido como inativo`);
-    await this.notificarAlteracao(`O projeto acadêmico ID ${id} foi inativado.`);
   }
 
   async reativarDemanda(id: number): Promise<Demanda> {
@@ -229,22 +245,18 @@ export class AdminService {
     await this.demandaRepository.save(demanda);
 
     await this.registrarAuditoria('Reativar Demanda', `Demanda ID=${id} reativada com sucesso`);
-    await this.notificarAlteracao(`A demanda ID ${id} está ativa e visível novamente.`);
-
     return demanda;
   }
 
   async reativarProjeto(id: number): Promise<Projeto> {
-    const projeto = await this.projetoRepository.findOne({ where: { proIntId: id } });
-    if (!projeto) throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
+    const proyecto = await this.projetoRepository.findOne({ where: { proIntId: id } });
+    if (!proyecto) throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
 
-    projeto.proBoolAtivo = true;
-    await this.projetoRepository.save(projeto);
+    proyecto.proBoolAtivo = true;
+    await this.projetoRepository.save(proyecto);
 
     await this.registrarAuditoria('Reativar Projeto', `Projeto ID=${id} restaurado`);
-    await this.notificarAlteracao(`O projeto ID ${id} foi reativado e integrado ao sistema.`);
-
-    return projeto;
+    return proyecto;
   }
 
   async listarAdmins(): Promise<Admin[]> {

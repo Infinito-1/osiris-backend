@@ -1,3 +1,4 @@
+
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GrupoService } from './services/grupo.service';
@@ -6,6 +7,7 @@ import { Grupo } from './entities/grupo.entity';
 import { Usuario } from '../usuario/entities/usuario.entity';
 import { Demanda } from '../demanda/entities/demanda.entity';
 import { Candidatura } from '../candidatura/entities/candidatura.entity';
+import { MailModule } from '../mail/mail.module'; // 👈 Importação adicionada aqui
 
 @Module({
   imports: [
@@ -15,6 +17,7 @@ import { Candidatura } from '../candidatura/entities/candidatura.entity';
       Demanda, 
       Candidatura
     ]),
+    MailModule, // 👈 Injetado para dar superpoderes de e-mail ao módulo de grupos
   ],
   providers: [GrupoService],
   controllers: [GrupoController],

@@ -1,6 +1,6 @@
 import {
   Body, Controller, Delete, Get, HttpCode, HttpStatus,
-  Param, ParseIntPipe, Post, Put, UseGuards, Req, ParseEnumPipe
+  Param, ParseIntPipe, Post, Put, Patch, UseGuards, Req, ParseEnumPipe
 } from '@nestjs/common';
 import { CandidaturaService } from '../services/candidatura.service';
 import { Candidatura } from '../entities/candidatura.entity';
@@ -10,7 +10,7 @@ import { Roles } from '../../auth/roles.decorator';
 import { CreateCandidaturaDto } from '../dto/create-candidatura.dto';
 import { UpdateCandidaturaDto } from '../dto/update-candidatura.dto';
 import { StatusCandidatura } from '../dto/status.enum';
-import { ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiResponse, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('Candidaturas')
 @ApiBearerAuth()
@@ -30,9 +30,9 @@ export class CandidaturaController {
   @Get(':id')
   @Roles('Coordenador', 'Empreendedor', 'Grupo', 'Admin')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Busca os detalhes de uma candidatura pelo ID' })
-  findById(@Param('id', ParseIntPipe) id: number): Promise<Candidatura> {
-    return this.candidaturaService.findById(id);
+  @ApiResponse({ status: 200, description: 'Busca os detalhes de uma candidatura pelo ID (Garante RN-10)' })
+  findById(@Param('id', ParseIntPipe) id: number, @Req() req: any): Promise<Candidatura> {
+    return this.candidaturaService.findById(id, req.user);
   }
 
   @Get('status/:status')
@@ -57,7 +57,7 @@ export class CandidaturaController {
   @Put(':id')
   @Roles('Coordenador', 'Admin')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Atualiza propriedades ou status da candidatura' })
+  @ApiResponse({ status: 200, description: 'Atualiza propriedades ou status da candidatura (RN-06)' })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateCandidaturaDto,
@@ -65,10 +65,20 @@ export class CandidaturaController {
     return this.candidaturaService.update(id, dto);
   }
 
+  @Patch(':id/desistir')
+  @Roles('Grupo')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Permite que o grupo logado desista de uma candidatura ativa' })
+  @ApiResponse({ status: 200, description: 'Status alterado com sucesso para Desistente.' })
+  desistir(@Param('id', ParseIntPipe) id: number, @Req() req: any): Promise<Candidatura> {
+    const usuarioId = req.user?.id || req.user?.usuIntId;
+    return this.candidaturaService.desistir(id, Number(usuarioId));
+  }
+
   @Delete(':id')
   @Roles('Admin')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiResponse({ status: 204, description: 'Marca candidatura como Recusada (Inativa)' })
+  @ApiResponse({ status: 204, description: 'Força cancelamento administrativo (Altera para Recusada)' })
   delete(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.candidaturaService.delete(id);
   }
