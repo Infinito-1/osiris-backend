@@ -43,7 +43,7 @@ export class UsuarioService {
       const emailInstitucionalRegex = /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
       if (!emailInstitucionalRegex.test(dto.usuStrEmail)) {
         throw new HttpException(
-          'Líderes de grupo devem utilizar um e-mail institucional válido do CPS (ex: @aluno.cps.sp.gov.br, @fatec.sp.gov.br).',
+          'Líderes de grupo devem utilizar um e-mail institucional válido do CPS (ex: @aluno.cps.sp.gov.br).',
           HttpStatus.BAD_REQUEST,
         );
       }

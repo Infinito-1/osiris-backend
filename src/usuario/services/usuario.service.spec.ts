@@ -45,7 +45,7 @@ describe('UsuarioService', () => {
   describe('create', () => {
     const createDto: CreateUsuarioDto = {
       usuStrNome: 'Maria Silva',
-      usuStrEmail: 'maria.silva@fatec.sp.gov.br',
+      usuStrEmail: 'maria.silva@aluno.cps.sp.gov.br',
       usuStrSenha: 'password123',
       usuStrTipo: 'Grupo',
     };
@@ -94,7 +94,7 @@ describe('UsuarioService', () => {
 
       await expect(service.create(dtoInvalido)).rejects.toThrow(
         new HttpException(
-          'Líderes de grupo devem utilizar um e-mail institucional válido do CPS (ex: @aluno.cps.sp.gov.br, @fatec.sp.gov.br).',
+          'Líderes de grupo devem utilizar um e-mail institucional válido do CPS (ex: @aluno.cps.sp.gov.br).',
           HttpStatus.BAD_REQUEST,
         ),
       );

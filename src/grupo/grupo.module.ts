@@ -12,13 +12,7 @@ import { Semestre } from '../semestre/entities/semestre.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      Grupo, 
-      Usuario, 
-      Demanda, 
-      Candidatura,
-      Semestre
-    ]),
+    TypeOrmModule.forFeature([Grupo, Usuario, Demanda, Candidatura, Semestre]),
     MailModule, // 👈 Injetado para dar superpoderes de e-mail ao módulo de grupos
   ],
   providers: [GrupoService],

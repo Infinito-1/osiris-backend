@@ -8,6 +8,7 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { RolesGuard } from '../../auth/roles.guard';
 import { Roles } from '../../auth/roles.decorator';
 import { ApiTags, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { Public } from '../../auth/public.decorator';
 
 @ApiTags('Semestres')
 @ApiBearerAuth()
@@ -16,8 +17,8 @@ import { ApiTags, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 export class SemestreController {
   constructor(private readonly semestreService: SemestreService) {}
 
+  @Public()
   @Get()
-  @Roles('Coordenador', 'Empreendedor', 'Grupo', 'Admin')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: 'Retorna todos os semestres letivos do sistema' })
   findAll(): Promise<Semestre[]> {
