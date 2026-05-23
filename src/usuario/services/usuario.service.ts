@@ -72,7 +72,11 @@ export class UsuarioService {
     const usuarioSalvo = await this.usuarioRepository.save(novoUsuario);
 
     // Dispara o e-mail assincronamente
-    await this.mailService.sendConfirmationEmail(usuarioSalvo.usuStrEmail, tokenConfirmacao);
+    this.mailService
+      .sendConfirmationEmail(usuarioSalvo.usuStrEmail, tokenConfirmacao)
+      .catch((err) => {
+        console.error("ERRO NO ENVIO DE EMAIL (ignorado para não derrubar o cadastro):", err);
+      });
 
     return {
       statusCode: HttpStatus.CREATED,

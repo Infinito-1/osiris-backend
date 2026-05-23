@@ -37,8 +37,8 @@ export class GrupoController {
     return this.grupoService.findByName(grupo);
   }
 
+  @Public()
   @Post()
-  @Roles('Admin', 'Grupo', 'Aluno')
   @HttpCode(HttpStatus.CREATED)
   create(@Body() dto: CreateGrupoDto): Promise<Grupo> {
     return this.grupoService.create(dto);
