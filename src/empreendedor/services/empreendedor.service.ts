@@ -26,12 +26,15 @@ export class EmpreendedorService {
   }
 
   async findById(id: number): Promise<Empreendedor> {
-    const empreendedor = await this.empreendedorRepository.findOne({ 
-      where: { empIntId: id }, 
-      relations: ['usuario'] 
+    const empreendedor = await this.empreendedorRepository.findOne({
+      where: { empIntId: id },
+      relations: ['usuario'],
     });
     if (!empreendedor) {
-      throw new HttpException('Empreendedor corporativo não encontrado', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Empreendedor corporativo não encontrado',
+        HttpStatus.NOT_FOUND,
+      );
     }
     return empreendedor;
   }
@@ -42,15 +45,23 @@ export class EmpreendedorService {
       relations: ['usuario'],
     });
     if (!empreendedor) {
-      throw new HttpException('Perfil de empreendedor não vinculado a este usuário.', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Perfil de empreendedor não vinculado a este usuário.',
+        HttpStatus.NOT_FOUND,
+      );
     }
     return empreendedor;
   }
 
   async create(dto: CreateEmpreendedorDto): Promise<Empreendedor> {
-    const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: dto.usuIntId } });
+    const usuario = await this.usuarioRepository.findOne({
+      where: { usuIntId: dto.usuIntId },
+    });
     if (!usuario) {
-      throw new HttpException('Usuário de credencial base não encontrado', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Usuário de credencial base não encontrado',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     // Alinha a Role do usuário com o perfil criado no ecossistema
@@ -73,9 +84,14 @@ export class EmpreendedorService {
     if (dto.empChaCnpj) empreendedor.empChaCnpj = dto.empChaCnpj;
 
     if (dto.usuIntId) {
-      const novoUsuario = await this.usuarioRepository.findOne({ where: { usuIntId: dto.usuIntId } });
+      const novoUsuario = await this.usuarioRepository.findOne({
+        where: { usuIntId: dto.usuIntId },
+      });
       if (!novoUsuario) {
-        throw new HttpException('Usuário informado para troca não existe', HttpStatus.NOT_FOUND);
+        throw new HttpException(
+          'Usuário informado para troca não existe',
+          HttpStatus.NOT_FOUND,
+        );
       }
       empreendedor.usuario = novoUsuario;
     }
@@ -108,16 +124,19 @@ export class EmpreendedorService {
 
   async reativarDemanda(demIntId: number, usuarioId: number): Promise<Demanda> {
     const empreendedor = await this.findByUsuarioId(usuarioId);
-    
+
     const demanda = await this.demandaRepository.findOne({
-      where: { demIntId, empreendedor: { empIntId: empreendedor.empIntId } }
+      where: { demIntId, empreendedor: { empIntId: empreendedor.empIntId } },
     });
 
     if (!demanda) {
-      throw new HttpException('Demanda inexistente ou não associada à sua conta', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Demanda inexistente ou não associada à sua conta',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
-    demanda.demBoolAtivo = true;     
+    demanda.demBoolAtivo = true;
     demanda.demBoolAceitacao = false; // Ao reativar, volta obrigatoriamente para a esteira de triagem
 
     return this.demandaRepository.save(demanda);
@@ -126,34 +145,93 @@ export class EmpreendedorService {
   async getDashboardDados(usuarioId: number): Promise<any> {
     const empreendedor = await this.findByUsuarioId(usuarioId);
 
+    const empId = empreendedor.empIntId;
+
+    // Métricas
     const totalDemandas = await this.demandaRepository.count({
-      where: { empreendedor: { empIntId: empreendedor.empIntId } }
+      where: { empreendedor: { empIntId: empId } },
     });
 
     const aprovadasGaleria = await this.demandaRepository.count({
-      where: { empreendedor: { empIntId: empreendedor.empIntId }, demBoolAceitacao: true, demBoolAtivo: true }
+      where: {
+        empreendedor: { empIntId: empId },
+        demBoolAceitacao: true,
+        demBoolAtivo: true,
+      },
     });
 
-    // Ajustado para garantir que rascunhos desativados não sumam como pendências fantasmas
     const analisePendente = await this.demandaRepository.count({
-      where: { empreendedor: { empIntId: empreendedor.empIntId }, demBoolAceitacao: false, demBoolAtivo: true }
+      where: {
+        empreendedor: { empIntId: empId },
+        demBoolAceitacao: false,
+        demBoolAtivo: true,
+      },
     });
 
     const candidaturasRecebidas = await this.candidaturaRepository.count({
-      where: { demanda: { empreendedor: { empIntId: empreendedor.empIntId } } }
+      where: { demanda: { empreendedor: { empIntId: empId } } },
+    });
+
+    // Listas de demandas por aba
+    const demandasPendentes = await this.demandaRepository.find({
+      where: {
+        empreendedor: { empIntId: empId },
+        demBoolAceitacao: false,
+        demBoolAtivo: true,
+      },
+      relations: ['candidatura', 'tipo'],
+      order: { demDataCriacao: 'DESC' },
+    });
+
+    const demandasEmAndamento = await this.demandaRepository.find({
+      where: {
+        empreendedor: { empIntId: empId },
+        demBoolAceitacao: true,
+        demBoolAtivo: true,
+      },
+      relations: ['candidatura', 'candidatura.grupo', 'tipo'],
+      order: { demDataCriacao: 'DESC' },
+    });
+
+    const demandasConcluidas = await this.demandaRepository.find({
+      where: { empreendedor: { empIntId: empId }, demBoolAtivo: false },
+      relations: ['candidatura', 'candidatura.grupo', 'tipo'],
+      order: { demDataCriacao: 'DESC' },
+    });
+
+    const formatarDemanda = (d: any) => ({
+      id: d.demIntId,
+      nome: d.demStrNome,
+      descricao: d.demStrDescricao,
+      ativo: d.demBoolAtivo,
+      aceitacao: d.demBoolAceitacao,
+      semestreRecomendado: d.demStrSemestreRecomendado ?? null,
+      areaTecnica: d.demStrAreaTecnica ?? null,
+      tipagem: d.demStrTipagem ?? null,
+      tipos: d.tipo?.map((t: any) => t.tipStrNome) ?? [],
+      totalCandidaturas: d.candidatura?.length ?? 0,
+      grupos:
+        d.candidatura
+          ?.filter((c: any) => c.grupo)
+          .map((c: any) => c.grupo.gruStrNome) ?? [],
     });
 
     return {
-      modulo: 'Painel Corporativo de Inovação - Osiris',
       empresa: empreendedor.empStrEmpresa,
       cnpj: empreendedor.empChaCnpj,
+      nome: empreendedor.usuario?.usuStrNome ?? '—',
+      email: empreendedor.usuario?.usuStrEmail ?? '—',
       metricas: {
         totalDemandasSubmetidas: totalDemandas,
         demandasPublicadasNaGaleria: aprovadasGaleria,
         demandasEmAnalisePeloCoordenador: analisePendente,
-        propostasDeGruposRecebidas: candidaturasRecebidas
+        propostasDeGruposRecebidas: candidaturasRecebidas,
       },
-      timestamp: new Date().toISOString()
+      demandas: {
+        pendentes: demandasPendentes.map(formatarDemanda),
+        emAndamento: demandasEmAndamento.map(formatarDemanda),
+        concluidas: demandasConcluidas.map(formatarDemanda),
+      },
     };
   }
 }
