@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, Length } from 'class-validator';
+import { IsString, IsNotEmpty, Length, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateEmpreendedorDto {
@@ -8,9 +8,8 @@ export class CreateEmpreendedorDto {
   empStrEmpresa: string;
 
   @ApiProperty({ example: '12345678000195', description: 'CNPJ da empresa (14 dígitos)' })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  @Length(14, 14)
   empChaCnpj: string;
 
   @ApiProperty({ example: 5, description: 'ID do usuário vinculado ao empreendedor' })
