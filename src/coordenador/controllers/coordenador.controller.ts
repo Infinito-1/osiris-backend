@@ -91,7 +91,7 @@ export class CoordenadorController {
 
   @Put('demanda/:id/classificar')
   @Roles('Coordenador')
-  @ApiOperation({ summary: 'Definir semestre recomendado, área técnica e tipagem de uma demanda (RN-02)' })
+  @ApiOperation({ summary: 'Definir semestre recomendado e área técnica de uma demanda (RN-02)' })
   @ApiResponse({ status: 200, description: 'Demanda classificada com sucesso.' })
   classificarDemanda(@Param('id', ParseIntPipe) id: number, @Body() dto: ClassificarDemandaDto) {
     return this.coordenadorService.classificarDemanda(id, dto);

@@ -126,8 +126,7 @@ export class CoordenadorService {
     }
 
     demanda.demStrSemestreRecomendado = dto.semestre; 
-    demanda.demStrAreaTecnica = dto.areaTecnica;     
-    demanda.demStrTipagem = dto.tipagem;             
+    demanda.demStrAreaTecnica = dto.areaTecnica;               
 
     const apenasNumeros = dto.semestre.replace(/\D/g, '');
     const numeroSemestre = parseInt(apenasNumeros);

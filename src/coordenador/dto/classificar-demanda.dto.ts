@@ -12,8 +12,4 @@ export class ClassificarDemandaDto {
   @IsString()
   areaTecnica!: string;
 
-  @ApiProperty({ example: 'Projeto Integrador', description: 'Tipagem da demanda' })
-  @IsNotEmpty()
-  @IsString()
-  tipagem!: string;
 }

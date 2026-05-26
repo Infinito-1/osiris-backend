@@ -207,7 +207,6 @@ export class EmpreendedorService {
       aceitacao: d.demBoolAceitacao,
       semestreRecomendado: d.demStrSemestreRecomendado ?? null,
       areaTecnica: d.demStrAreaTecnica ?? null,
-      tipagem: d.demStrTipagem ?? null,
       tipos: d.tipo?.map((t: any) => t.tipStrNome) ?? [],
       totalCandidaturas: d.candidatura?.length ?? 0,
       grupos:
