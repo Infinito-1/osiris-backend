@@ -30,46 +30,50 @@ export class ProjetoService {
     });
 
     if (!projeto) {
-      throw new HttpException('Projeto acadêmico não encontrado no Osiris', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Projeto acadêmico não encontrado no Osiris',
+        HttpStatus.NOT_FOUND,
+      );
     }
     return projeto;
   }
 
   async create(dto: CreateProjetoDto): Promise<Projeto> {
-    // 1. Busca a candidatura base
-    const candidatura = await this.candidaturaRepository.findOne({
-      where: { canIntId: dto.canIntId }
-    });
+    let candidatura: Candidatura | null = null;
 
-    if (!candidatura) {
-      throw new HttpException('Candidatura base não encontrada no ecossistema', HttpStatus.NOT_FOUND);
-    }
+    if (dto.canIntId) {
+      candidatura = await this.candidaturaRepository.findOne({
+        where: { canIntId: dto.canIntId },
+      });
+      if (!candidatura) {
+        throw new HttpException(
+          'Candidatura base não encontrada no ecossistema',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      if (candidatura.canStrStatus !== StatusCandidatura.Aceita) {
+        throw new HttpException(
+          `Não é possível iniciar um projeto. A candidatura encontra-se em estado: ${candidatura.canStrStatus}.`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
 
-    //  Compara estritamente com o Enum para evitar o erro TS2367
-    if (candidatura.canStrStatus !== StatusCandidatura.Aceita) {
-      throw new HttpException(
-        `Não é possível iniciar um projeto. A candidatura encontra-se em estado: ${candidatura.canStrStatus}. Ela precisa ser "Aceita" primeiro.`,
-        HttpStatus.BAD_REQUEST
-      );
-    }
-
-    //  Impede duplicidade de projetos ativos para a mesma candidatura
-    const projetoExistente = await this.projetoRepository.findOne({
-      where: { candidatura: { canIntId: dto.canIntId }, proBoolAtivo: true }
-    });
-
-    if (projetoExistente) {
-      throw new HttpException(
-        'Operação bloqueada: Já existe um projeto ativo em andamento para esta candidatura.',
-        HttpStatus.CONFLICT
-      );
+      const projetoExistente = await this.projetoRepository.findOne({
+        where: { candidatura: { canIntId: dto.canIntId }, proBoolAtivo: true },
+      });
+      if (projetoExistente) {
+        throw new HttpException(
+          'Já existe um projeto ativo em andamento para esta candidatura.',
+          HttpStatus.CONFLICT,
+        );
+      }
     }
 
     const projeto = this.projetoRepository.create({
       proStrDescricao: dto.proStrDescricao,
       proDateInicio: dto.proDateInicio,
       proBoolAtivo: true,
-      candidatura: candidatura
+      candidatura: candidatura ?? undefined,
     });
 
     return this.projetoRepository.save(projeto);
@@ -80,13 +84,16 @@ export class ProjetoService {
 
     if (dto.proStrDescricao) projeto.proStrDescricao = dto.proStrDescricao;
     if (dto.proDateInicio) projeto.proDateInicio = dto.proDateInicio;
-    
+
     if (dto.canIntId) {
       const candidatura = await this.candidaturaRepository.findOne({
-        where: { canIntId: dto.canIntId }
+        where: { canIntId: dto.canIntId },
       });
       if (!candidatura) {
-        throw new HttpException('A nova candidatura informada não existe', HttpStatus.NOT_FOUND);
+        throw new HttpException(
+          'A nova candidatura informada não existe',
+          HttpStatus.NOT_FOUND,
+        );
       }
       projeto.candidatura = candidatura;
     }
