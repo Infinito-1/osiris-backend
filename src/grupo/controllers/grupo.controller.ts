@@ -28,13 +28,6 @@ export class GrupoController {
     return this.grupoService.findAll();
   }
 
-  @Public()
-  @Get(':id')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Visualizar portfólio do grupo por ID (Acesso Livre)' })
-  findById(@Param('id', ParseIntPipe) id: number): Promise<Grupo> {
-    return this.grupoService.findById(id);
-  }
 
   @Public()
   @Get('nome/:gruStrNome')
@@ -44,8 +37,8 @@ export class GrupoController {
     return this.grupoService.findByName(grupo);
   }
 
+  @Public()
   @Post()
-  @Roles('Admin', 'Grupo', 'Aluno')
   @HttpCode(HttpStatus.CREATED)
   create(@Body() dto: CreateGrupoDto): Promise<Grupo> {
     return this.grupoService.create(dto);
@@ -65,6 +58,21 @@ export class GrupoController {
   getPerfil(@Request() req): Promise<Grupo> {
     const usuarioId = req.user.id || req.user.usuIntId;
     return this.grupoService.findByUsuarioId(usuarioId);
+  }
+
+    @Public()
+    @Get(':id')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Visualizar portfólio do grupo por ID (Acesso Livre)' })
+    findById(@Param('id', ParseIntPipe) id: number): Promise<Grupo> {
+      return this.grupoService.findById(id);
+    }
+
+  @Put('suspender/:id')
+  @Roles('Admin')
+  @HttpCode(HttpStatus.OK)
+  suspender(@Param('id', ParseIntPipe) id: number): Promise<Grupo> {
+    return this.grupoService.suspender(id);
   }
 
   @Put(':id')
@@ -97,13 +105,6 @@ export class GrupoController {
   ): Promise<void> {
     const usuarioId = req.user.id || req.user.usuIntId;
     return this.grupoService.desistirCandidatura(canIntId, usuarioId);
-  }
-
-  @Put('suspender/:id')
-  @Roles('Admin')
-  @HttpCode(HttpStatus.OK)
-  suspender(@Param('id', ParseIntPipe) id: number): Promise<Grupo> {
-    return this.grupoService.suspender(id);
   }
 
   @Delete(':id')

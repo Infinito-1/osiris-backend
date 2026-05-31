@@ -20,6 +20,11 @@ export class CreateDemandaDto {
   @IsBoolean()
   demBoolAceitacao: boolean;
 
+  @ApiProperty({ example: false, description: 'Autoriza exibição do contato do empreendedor para grupos', required: false })
+  @IsOptional()
+  @IsBoolean()
+  demBoolExibirContato?: boolean;
+
   @ApiProperty({ example: 1, description: 'ID do semestre vinculado' })
   @IsInt()
   semIntId: number;

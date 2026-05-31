@@ -8,14 +8,20 @@ import { Usuario } from '../usuario/entities/usuario.entity';
 import { Demanda } from '../demanda/entities/demanda.entity';
 import { Candidatura } from '../candidatura/entities/candidatura.entity';
 import { MailModule } from '../mail/mail.module'; // 👈 Importação adicionada aqui
+import { Semestre } from '../semestre/entities/semestre.entity';
+import { Projeto } from '../projeto/entities/projeto.entity';
+import { HistoricoProjeto } from '../historico_projeto/entities/historico_projeto.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      Grupo, 
-      Usuario, 
-      Demanda, 
-      Candidatura
+      Grupo,
+      Usuario,
+      Demanda,
+      Candidatura,
+      Semestre,
+      Projeto,
+      HistoricoProjeto,
     ]),
     MailModule, // 👈 Injetado para dar superpoderes de e-mail ao módulo de grupos
   ],

@@ -24,10 +24,9 @@ export class Empreendedor {
   @Column({ name: 'emp_str_empresa', length: 100, nullable: false })
   empStrEmpresa!: string;
 
-  @IsNotEmpty()
   @IsString()
   @Length(14, 14) // CNPJ sempre tem 14 caracteres
-  @Column({ name: 'emp_cha_cnpj', type: 'char', length: 14, nullable: false })
+  @Column({ name: 'emp_cha_cnpj', type: 'char', length: 14, nullable: true })
   empChaCnpj!: string;
 
   @OneToMany(() => Demanda, (demanda) => demanda.empreendedor)

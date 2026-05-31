@@ -82,7 +82,7 @@ describe('GrupoService', () => {
     it('deve criar um grupo com sucesso quando o e-mail for institucional da Fatec', async () => {
       const mockUsuario = { 
         usuIntId: 1, 
-        usuStrEmail: 'deyse.soares@fatec.sp.gov.br', 
+        usuStrEmail: 'deyse.soares@aluno.cps.sp.gov.br', 
         usuStrTipo: 'Aluno' 
       };
       
@@ -134,7 +134,7 @@ describe('GrupoService', () => {
 
   describe('seCandidatar (Fluxo de Candidatura e E-mail)', () => {
     it('deve gerar a candidatura e disparar o e-mail de notificação para o líder do grupo', async () => {
-      const mockUsuarioLider = { usuIntId: 1, usuStrEmail: 'lider@fatec.sp.gov.br' };
+      const mockUsuarioLider = { usuIntId: 1, usuStrEmail: 'lider@aluno.cps.sp.gov.br' };
       const mockGrupo = { gruIntId: 10, gruStrNome: 'Alpha Team', gruStrLider: 'Deyse', usuario: mockUsuarioLider };
       const mockDemanda = { demIntId: 5, demStrNome: 'Sistema Osiris Web', demBoolAtivo: true, demBoolAceitacao: true };
       
@@ -149,7 +149,7 @@ describe('GrupoService', () => {
 
       // Garante que o e-mail foi disparado para a pessoa certa com os dados do projeto
       expect(mockMailService.sendStatusCandidaturaEmail).toHaveBeenCalledWith(
-        'lider@fatec.sp.gov.br',
+        'lider@aluno.cps.sp.gov.br',
         'Sistema Osiris Web',
         'Pendente (Aguardando avaliação do Coordenador)',
       );
