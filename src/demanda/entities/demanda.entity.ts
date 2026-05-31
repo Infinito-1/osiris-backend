@@ -57,6 +57,9 @@ export class Demanda {
   @Column({ name: 'dem_str_area_tecnica', length: 100, nullable: true })
   demStrAreaTecnica?: string;
 
+  @Column({ name: 'dem_bool_exibir_contato', default: false })
+  demBoolExibirContato!: boolean;
+
   @ManyToMany(() => TipoDemanda, (tipo) => tipo.demandas)
   @JoinTable({
     name: 'demanda_tipo_demanda',

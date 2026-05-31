@@ -86,6 +86,7 @@ export class DemandaService {
       demBoolAceitaMudancaTipo: dto.demBoolAceitaMudancaTipo,
       demBoolAceitacao: false, // Força a regra de negócio do ecossistema Osiris
       demBoolAtivo: true,
+      demBoolExibirContato: dto.demBoolExibirContato ?? false,
       semestre: dto.semIntId ? ({ semIntId: dto.semIntId } as any) : null,
       empreendedor: { empIntId: dto.empIntId } as any,
       coordenador: dto.cooIntId ? ({ cooIntId: dto.cooIntId } as any) : null,
@@ -102,8 +103,7 @@ export class DemandaService {
     if (dto.demStrDescricao) demanda.demStrDescricao = dto.demStrDescricao;
     if (dto.demBoolAceitaMudancaTipo !== undefined) demanda.demBoolAceitaMudancaTipo = dto.demBoolAceitaMudancaTipo;
     
-    // 🛡️ Segurança: O empreendedor não pode atualizar o status de aprovação de forma direta
-    // A aprovação legítima ocorre apenas através do CoordenadorService via fluxo de triagem
+    if (dto.demBoolExibirContato !== undefined) demanda.demBoolExibirContato = dto.demBoolExibirContato;
     if (dto.demBoolAceitacao !== undefined) {
       demanda.demBoolAceitacao = dto.demBoolAceitacao;
     }
