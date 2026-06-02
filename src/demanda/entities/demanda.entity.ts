@@ -60,6 +60,9 @@ export class Demanda {
   @Column({ name: 'dem_bool_exibir_contato', default: false })
   demBoolExibirContato!: boolean;
 
+  @Column({ name: 'dem_str_motivo_rejeicao', length: 300, nullable: true })
+  demStrMotivoRejeicao?: string;
+
   @ManyToMany(() => TipoDemanda, (tipo) => tipo.demandas)
   @JoinTable({
     name: 'demanda_tipo_demanda',
