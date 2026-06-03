@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsInt, IsEnum, IsUrl } from 'class-validator';
+import { IsNotEmpty, IsString, IsInt, IsEnum, IsUrl, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { StatusProjeto } from './status-projeto.enum';
 
@@ -9,9 +9,19 @@ export class CreateHistoricoProjetoDto {
   hspStrDesc: string;
 
   @ApiProperty({ example: 'https://github.com/usuario/repositorio', description: 'Link do repositório ou deploy do projeto' })
-  @IsNotEmpty()
+  @IsOptional()
   @IsUrl()
-  hspStrLinkProjeto: string;
+  hspStrLinkProjeto?: string;
+
+  @ApiProperty({ example: 'https://github.com/usuario/repositorio', description: 'Link do repositório do projeto' })
+  @IsOptional()
+  @IsUrl()
+  hspStrLinkGithub?: string;
+
+  @ApiProperty({ example: 'https://meuprojeto.com', description: 'Link do deploy do projeto' })
+  @IsOptional()
+  @IsUrl()
+  hspStrLinkDeploy?: string;
 
   @ApiProperty({ example: 'Em Desenvolvimento', enum: StatusProjeto, description: 'Novo status do projeto' })
   @IsNotEmpty()

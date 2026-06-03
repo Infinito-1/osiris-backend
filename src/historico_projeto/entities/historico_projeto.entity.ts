@@ -19,9 +19,14 @@ export class HistoricoProjeto {
   @IsNotEmpty()
   hspStrDesc!: string;
 
-  @Column({ name: 'hsp_str_link_projeto', length: 200, nullable: false })
-  @IsNotEmpty()
-  hspStrLinkProjeto!: string;
+  @Column({ name: 'hsp_str_link_github', length: 200, nullable: true })
+  hspStrLinkGithub?: string;
+
+  @Column({ name: 'hsp_str_link_deploy', length: 200, nullable: true })
+  hspStrLinkDeploy?: string;
+
+  @Column({ name: 'hsp_str_link_projeto', length: 200, nullable: true }) // ← muda para nullable
+  hspStrLinkProjeto?: string;
 
   @Column({ name: 'hsp_str_status', type: 'enum', enum: StatusProjeto, nullable: false })
   @IsNotEmpty()
