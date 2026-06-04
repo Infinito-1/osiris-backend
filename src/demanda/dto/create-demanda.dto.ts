@@ -25,7 +25,8 @@ export class CreateDemandaDto {
   @IsBoolean()
   demBoolExibirContato?: boolean;
 
-  @ApiProperty({ example: 1, description: 'ID do semestre vinculado' })
+  @ApiProperty({ example: 1, description: 'ID do semestre vinculado', required: false })
+  @IsOptional()
   @IsInt()
   semIntId: number;
 
@@ -33,7 +34,8 @@ export class CreateDemandaDto {
   @IsInt()
   empIntId: number;
 
-  @ApiProperty({ example: 3, description: 'ID do coordenador vinculado' })
+  @ApiProperty({ example: 3, description: 'ID do coordenador vinculado', required: false })
+  @IsOptional()
   @IsInt()
   cooIntId: number;
 

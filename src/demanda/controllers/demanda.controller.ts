@@ -45,8 +45,8 @@ export class DemandaController {
     return this.demandaService.findAllData(ordem);
   }
 
+  @Public()
   @Get(':id')
-  @Roles('Coordenador', 'Empreendedor', 'Grupo', 'Admin')
   @HttpCode(HttpStatus.OK)
   findById(@Param('id', ParseIntPipe) id: number): Promise<Demanda> {
     return this.demandaService.findById(id);

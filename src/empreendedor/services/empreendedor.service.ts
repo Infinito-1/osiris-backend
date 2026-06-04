@@ -142,16 +142,15 @@ export class EmpreendedorService {
     return this.demandaRepository.save(demanda);
   }
 
+  // Apenas o método getDashboardDados atualizado — o restante do service permanece igual
+
   async getDashboardDados(usuarioId: number): Promise<any> {
     const empreendedor = await this.findByUsuarioId(usuarioId);
-
     const empId = empreendedor.empIntId;
 
-    // Métricas
     const totalDemandas = await this.demandaRepository.count({
       where: { empreendedor: { empIntId: empId } },
     });
-
     const aprovadasGaleria = await this.demandaRepository.count({
       where: {
         empreendedor: { empIntId: empId },
@@ -159,7 +158,6 @@ export class EmpreendedorService {
         demBoolAtivo: true,
       },
     });
-
     const analisePendente = await this.demandaRepository.count({
       where: {
         empreendedor: { empIntId: empId },
@@ -167,12 +165,10 @@ export class EmpreendedorService {
         demBoolAtivo: true,
       },
     });
-
     const candidaturasRecebidas = await this.candidaturaRepository.count({
       where: { demanda: { empreendedor: { empIntId: empId } } },
     });
 
-    // Listas de demandas por aba
     const demandasPendentes = await this.demandaRepository.find({
       where: {
         empreendedor: { empIntId: empId },
@@ -193,9 +189,35 @@ export class EmpreendedorService {
       order: { demDataCriacao: 'DESC' },
     });
 
-    const demandasConcluidas = await this.demandaRepository.find({
-      where: { empreendedor: { empIntId: empId }, demBoolAtivo: false },
-      relations: ['candidatura', 'candidatura.grupo', 'tipo'],
+    // desativadas pelo empreendedor: ativo=false mas aceitacao=true (estava aprovada) ou aceitacao=null/false mas ativo=false E NÃO rejeitada
+    // rejeitadas pelo coordenador: ativo=false E aceitacao=false
+    // Para distinguir: usamos a lógica definida — rejeitada = ativo=false + aceitacao=false
+    // desativada = ativo=false + aceitacao=true  OU  ativo=false + aceitacao=false mas sem ter sido classificada
+    // Convenção adotada: rejeitada = ativo=false + aceitacao=false
+    //                    desativada = ativo=false + aceitacao=true (empreendedor desativou após aprovação)
+    //                               + ativo=false + aceitacao=false + semestre=null (nunca foi ao coordenador — desativada antes)
+    // Simplificando para o front: separamos apenas por aceitacao
+
+    const demandasDesativadas = await this.demandaRepository.find({
+      where: [
+        // desativada após aprovação
+        {
+          empreendedor: { empIntId: empId },
+          demBoolAtivo: false,
+          demBoolAceitacao: true,
+        },
+      ],
+      relations: ['tipo'],
+      order: { demDataCriacao: 'DESC' },
+    });
+
+    const demandasRejeitadas = await this.demandaRepository.find({
+      where: {
+        empreendedor: { empIntId: empId },
+        demBoolAtivo: false,
+        demBoolAceitacao: false,
+      },
+      relations: ['tipo'],
       order: { demDataCriacao: 'DESC' },
     });
 
@@ -229,7 +251,8 @@ export class EmpreendedorService {
       demandas: {
         pendentes: demandasPendentes.map(formatarDemanda),
         emAndamento: demandasEmAndamento.map(formatarDemanda),
-        concluidas: demandasConcluidas.map(formatarDemanda),
+        desativadas: demandasDesativadas.map(formatarDemanda),
+        rejeitadas: demandasRejeitadas.map(formatarDemanda),
       },
     };
   }

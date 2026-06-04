@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsDateString, IsInt } from 'class-validator';
+import { IsNotEmpty, IsString, IsDateString, IsInt, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateProjetoDto {
@@ -12,8 +12,8 @@ export class CreateProjetoDto {
   @IsDateString()
   proDateInicio: Date;
 
-  @ApiProperty({ example: 42, description: 'ID da Candidatura aprovada que gerou este projeto' })
-  @IsNotEmpty()
+  @ApiProperty({ example: 42, description: 'ID da Candidatura aprovada que gerou este projeto', required: false})
+  @IsOptional()
   @IsInt()
   canIntId: number;
 }
