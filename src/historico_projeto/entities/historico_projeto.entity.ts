@@ -25,7 +25,7 @@ export class HistoricoProjeto {
   @Column({ name: 'hsp_str_link_deploy', length: 200, nullable: true })
   hspStrLinkDeploy?: string;
 
-  @Column({ name: 'hsp_str_link_projeto', length: 200, nullable: true }) // ← muda para nullable
+  @Column({ name: 'hsp_str_link_projeto', length: 200, nullable: true })
   hspStrLinkProjeto?: string;
 
   @Column({ name: 'hsp_str_status', type: 'enum', enum: StatusProjeto, nullable: false })

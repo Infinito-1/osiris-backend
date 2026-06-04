@@ -26,6 +26,12 @@ export class Projeto {
   @Column({ name: 'pro_bool_ativo', type: 'boolean', default: true })
   proBoolAtivo!: boolean;
 
+  @Column({ name: 'pro_bool_desativado_coordenador', default: false })
+  proBoolDesativadoCoordenador!: boolean;
+
+  @Column({ name: 'pro_str_motivo_desativacao', length: 300, nullable: true })
+  proStrMotivoDesativacao?: string | null;
+
   @OneToOne(() => Candidatura)
   @JoinColumn({ name: 'can_int_id' })
   candidatura!: Candidatura;
