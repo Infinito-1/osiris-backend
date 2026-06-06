@@ -39,7 +39,7 @@ export class DemandaController {
   }
 
   @Get('ordenado')
-  @Roles('Coordenador', 'Empreendedor', 'Grupo', 'Admin')
+  @Public()
   @HttpCode(HttpStatus.OK)
   findAllOrdenado(@Query('ordem') ordem: 'ASC' | 'DESC' = 'ASC'): Promise<Demanda[]> {
     return this.demandaService.findAllData(ordem);
