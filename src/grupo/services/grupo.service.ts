@@ -56,7 +56,7 @@ export class GrupoService {
 
   async findByUsuarioId(usuarioId: number): Promise<Grupo> {
     const grupo = await this.grupoRepository.findOne({
-      where: { usuario: { usuIntId: usuarioId } },
+      where: { usuario: { usuIntId: usuarioId }, gruBoolAtivo: true },
       relations: ['usuario', 'semestre'],
     });
     if (!grupo) {
@@ -238,29 +238,51 @@ export class GrupoService {
   async getDashboardDados(usuarioId: number): Promise<any> {
     const grupo = await this.findByUsuarioId(usuarioId);
 
-    // Candidaturas do grupo com dados da demanda
     const candidaturas = await this.candidaturaRepository.find({
       where: { grupo: { gruIntId: grupo.gruIntId } },
       relations: ['demanda'],
       order: { canIntId: 'DESC' },
     });
 
-    // Projeto ativo vinculado a uma candidatura aceita deste grupo
-    const projeto = await this.projetoRepository.findOne({
-      where: {
-        proBoolAtivo: true,
-        candidatura: { grupo: { gruIntId: grupo.gruIntId } },
-      },
-      relations: [
-        'candidatura',
-        'candidatura.demanda',
-        'candidatura.demanda.empreendedor',
-        'historicos',
-      ],
-    });
+    // Projetos pelos dois caminhos
+    const [projetosViaCandidatura, projetosViaGrupo] = await Promise.all([
+      this.projetoRepository.find({
+        where: { candidatura: { grupo: { gruIntId: grupo.gruIntId } } },
+        relations: [
+          'candidatura',
+          'candidatura.grupo',
+          'candidatura.demanda',
+          'historicos',
+          'grupo',
+        ],
+        order: { proDateInicio: 'DESC' },
+      }),
+      this.projetoRepository.find({
+        where: { grupo: { gruIntId: grupo.gruIntId } },
+        relations: [
+          'candidatura',
+          'candidatura.grupo',
+          'candidatura.demanda',
+          'historicos',
+          'grupo',
+        ],
+        order: { proDateInicio: 'DESC' },
+      }),
+    ]);
 
-    // Histórico de entregas do projeto (vazio se não há projeto)
-    const historicos = projeto?.historicos ?? [];
+    const vistos = new Set(projetosViaCandidatura.map((p) => p.proIntId));
+    const extras = projetosViaGrupo.filter((p) => !vistos.has(p.proIntId));
+    const projetos = [...projetosViaCandidatura, ...extras].sort(
+      (a, b) =>
+        new Date(b.proDateInicio).getTime() -
+        new Date(a.proDateInicio).getTime(),
+    );
+
+    // Grupos vinculados ao usuário-representante (base para iteração futura)
+    const gruposVinculados = await this.grupoRepository.find({
+      where: { usuario: { usuIntId: usuarioId } },
+      relations: ['semestre'],
+    });
 
     const candidaturasFormatadas = candidaturas.map((c) => ({
       id: c.canIntId,
@@ -269,30 +291,56 @@ export class GrupoService {
       aprovacao: c.canBoolAprovacao,
     }));
 
-    const projetoFormatado = projeto
-      ? {
-          id: projeto.proIntId,
-          descricao: projeto.proStrDescricao,
-          dataInicio: projeto.proDateInicio,
-          demanda: projeto.candidatura?.demanda?.demStrNome ?? '—',
-          empreendedor:
-            projeto.candidatura?.demanda?.empreendedor?.empStrEmpresa?? '—',
-          status: 'Em Andamento',
-        }
-      : null;
-
-    const entregasFormatadas = historicos
-      .sort(
+    const projetosFormatados = projetos.map((projeto) => {
+      const historicosOrdenados = [...(projeto.historicos ?? [])].sort(
         (a, b) =>
-          new Date(b.hspDateData).getTime() - new Date(a.hspDateData).getTime(),
-      )
-      .map((h) => ({
-        id: h.hspIntId,
-        descricao: h.hspStrDesc,
-        link: h.hspStrLinkProjeto,
-        status: h.hspStrStatus,
-        data: new Date(h.hspDateData).toLocaleDateString('pt-BR'),
-      }));
+          new Date(a.hspDateData).getTime() - new Date(b.hspDateData).getTime(),
+      );
+
+      return {
+        id: projeto.proIntId,
+        descricao: projeto.proStrDescricao,
+        dataInicio: projeto.proDateInicio,
+        ativo: projeto.proBoolAtivo,
+        desativadoCoordenador: projeto.proBoolDesativadoCoordenador,
+        motivoDesativacao: projeto.proStrMotivoDesativacao ?? null,
+        candidatura: projeto.candidatura
+          ? {
+              id: projeto.candidatura.canIntId,
+              status: projeto.candidatura.canStrStatus,
+              grupo: projeto.candidatura.grupo
+                ? {
+                    nome: projeto.candidatura.grupo.gruStrNome,
+                    lider: projeto.candidatura.grupo.gruStrLider,
+                  }
+                : null,
+              demanda: projeto.candidatura.demanda
+                ? {
+                    id: projeto.candidatura.demanda.demIntId,
+                    nome: projeto.candidatura.demanda.demStrNome,
+                    descricao: projeto.candidatura.demanda.demStrDescricao,
+                  }
+                : null,
+            }
+          : null,
+        historicos: historicosOrdenados.map((h) => ({
+          id: h.hspIntId,
+          descricao: h.hspStrDesc,
+          status: h.hspStrStatus,
+          data: h.hspDateData,
+          link: h.hspStrLinkProjeto ?? null,
+          linkGithub: h.hspStrLinkGithub ?? null,
+          linkDeploy: h.hspStrLinkDeploy ?? null,
+        })),
+      };
+    });
+
+    const gruposVinculadosFormatados = gruposVinculados.map((g) => ({
+      id: g.gruIntId,
+      nome: g.gruStrNome,
+      semestre: g.semestre?.semStrDescricao ?? null,
+      ativo: g.gruBoolAtivo,
+    }));
 
     return {
       grupo: grupo.gruStrNome,
@@ -307,9 +355,129 @@ export class GrupoService {
           (c) => c.canStrStatus === StatusCandidatura.Aceita,
         ).length,
       },
-      projetoAtual: projetoFormatado,
       candidaturas: candidaturasFormatadas,
-      entregas: entregasFormatadas,
+      projetos: projetosFormatados,
+      gruposVinculados: gruposVinculadosFormatados,
     };
   }
+
+  // Busca o grupo ativo do usuário (usado nas ações de candidatura/projeto)
+  async findGrupoAtivoByUsuarioId(usuarioId: number): Promise<Grupo> {
+    const grupo = await this.grupoRepository.findOne({
+      where: { usuario: { usuIntId: usuarioId }, gruBoolAtivo: true },
+      relations: ['usuario', 'semestre'],
+    });
+    if (!grupo) {
+      throw new HttpException(
+        'Nenhum grupo ativo encontrado para este usuário.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    return grupo;
+  }
+
+  // Lista todos os grupos do usuário (ativos e inativos)
+  async findTodosByUsuarioId(usuarioId: number): Promise<Grupo[]> {
+    return this.grupoRepository.find({
+      where: { usuario: { usuIntId: usuarioId } },
+      relations: ['semestre'],
+      order: { gruBoolAtivo: 'DESC', gruIntId: 'DESC' },
+    });
+  }
+
+  // Cria novo grupo para usuário já existente, desativando o anterior
+  async criarNovoGrupo(dto: CreateGrupoDto, usuarioId: number): Promise<Grupo> {
+    const usuario = await this.usuarioRepository.findOne({
+      where: { usuIntId: usuarioId },
+    });
+    if (!usuario) {
+      throw new HttpException('Usuário não encontrado.', HttpStatus.NOT_FOUND);
+    }
+
+    // Desativa todos os grupos ativos do usuário
+    const gruposAtivos = await this.grupoRepository.find({
+      where: { usuario: { usuIntId: usuarioId }, gruBoolAtivo: true },
+    });
+    for (const g of gruposAtivos) {
+      g.gruBoolAtivo = false;
+      await this.grupoRepository.save(g);
+    }
+
+    const semestre = await this.semestreRepository.findOne({
+      where: { semIntId: dto.semIntId },
+    });
+
+    const novoGrupo = this.grupoRepository.create({
+      gruStrNome: dto.gruStrNome,
+      gruStrDescricao: dto.gruStrDescricao,
+      gruStrLider: usuario.usuStrNome,
+      gruChaRa: dto.gruChaRa,
+      gruIntTamanho: dto.gruIntTamanho,
+      gruStrMembros: dto.gruStrMembros,
+      gruBoolAtivo: true,
+      usuario: usuario,
+      semestre: semestre ?? undefined,
+    });
+
+    const salvo = await this.grupoRepository.save(novoGrupo);
+    return this.grupoRepository.findOne({
+      where: { gruIntId: salvo.gruIntId },
+      relations: ['usuario', 'semestre'],
+    }) as Promise<Grupo>;
+  }
+
+  async reativarGrupo(gruIntId: number, usuarioId: number): Promise<Grupo> {
+    // Desativa o grupo atualmente ativo
+    const gruposAtivos = await this.grupoRepository.find({
+      where: { usuario: { usuIntId: usuarioId }, gruBoolAtivo: true },
+    });
+    for (const g of gruposAtivos) {
+      g.gruBoolAtivo = false;
+      await this.grupoRepository.save(g);
+    }
+
+    // Reativa o grupo solicitado
+    const grupo = await this.grupoRepository.findOne({
+      where: { gruIntId, usuario: { usuIntId: usuarioId } },
+      relations: ['usuario', 'semestre'],
+    });
+    if (!grupo) {
+      throw new HttpException('Grupo não encontrado.', HttpStatus.NOT_FOUND);
+    }
+
+    grupo.gruBoolAtivo = true;
+    return this.grupoRepository.save(grupo);
+  }
+
+  //   const entregasFormatadas = historicos
+  //     .sort(
+  //       (a, b) =>
+  //         new Date(b.hspDateData).getTime() - new Date(a.hspDateData).getTime(),
+  //     )
+  //     .map((h) => ({
+  //       id: h.hspIntId,
+  //       descricao: h.hspStrDesc,
+  //       link: h.hspStrLinkProjeto,
+  //       status: h.hspStrStatus,
+  //       data: new Date(h.hspDateData).toLocaleDateString('pt-BR'),
+  //     }));
+
+  //   return {
+  //     grupo: grupo.gruStrNome,
+  //     lider: grupo.gruStrLider,
+  //     ra: grupo.gruChaRa,
+  //     semestre: grupo.semestre?.semStrDescricao ?? null,
+  //     membros: grupo.gruStrMembros ?? null,
+  //     tamanho: grupo.gruIntTamanho,
+  //     metricas: {
+  //       totalCandidaturasEnviadas: candidaturas.length,
+  //       candidaturasAceitas: candidaturas.filter(
+  //         (c) => c.canStrStatus === StatusCandidatura.Aceita,
+  //       ).length,
+  //     },
+  //     projetoAtual: projetoFormatado,
+  //     candidaturas: candidaturasFormatadas,
+  //     entregas: entregasFormatadas,
+  //   };
+  // }
 }

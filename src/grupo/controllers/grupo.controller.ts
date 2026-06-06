@@ -1,6 +1,18 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
-  Body, Controller, Delete, Get, HttpCode, HttpStatus,
-  Param, ParseIntPipe, Post, Put, UseGuards, Request
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { GrupoService } from '../services/grupo.service';
 import { Grupo } from '../entities/grupo.entity';
@@ -23,16 +35,19 @@ export class GrupoController {
   @Public()
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Listar todos os grupos ativos na vitrine (Acesso Livre)' })
+  @ApiOperation({
+    summary: 'Listar todos os grupos ativos na vitrine (Acesso Livre)',
+  })
   findAll(): Promise<Grupo[]> {
     return this.grupoService.findAll();
   }
 
-
   @Public()
   @Get('nome/:gruStrNome')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Filtrar grupos por correspondência de nome (Acesso Livre)' })
+  @ApiOperation({
+    summary: 'Filtrar grupos por correspondência de nome (Acesso Livre)',
+  })
   findByName(@Param('gruStrNome') grupo: string): Promise<Grupo[]> {
     return this.grupoService.findByName(grupo);
   }
@@ -60,13 +75,48 @@ export class GrupoController {
     return this.grupoService.findByUsuarioId(usuarioId);
   }
 
-    @Public()
-    @Get(':id')
-    @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Visualizar portfólio do grupo por ID (Acesso Livre)' })
-    findById(@Param('id', ParseIntPipe) id: number): Promise<Grupo> {
-      return this.grupoService.findById(id);
-    }
+  @Get('meus/todos')
+  @Roles('Grupo', 'Admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Lista todos os grupos do usuário logado (ativos e inativos)',
+  })
+  getMeusGrupos(@Request() req): Promise<Grupo[]> {
+    const usuarioId = req.user.id || req.user.usuIntId;
+    return this.grupoService.findTodosByUsuarioId(usuarioId);
+  }
+
+  @Post('reativar/:id')
+  @Roles('Grupo', 'Admin')
+  @HttpCode(HttpStatus.OK)
+  reativarGrupo(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req,
+  ): Promise<Grupo> {
+    const usuarioId = req.user.id || req.user.usuIntId;
+    return this.grupoService.reativarGrupo(id, usuarioId);
+  }
+
+  @Public()
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Visualizar portfólio do grupo por ID (Acesso Livre)',
+  })
+  findById(@Param('id', ParseIntPipe) id: number): Promise<Grupo> {
+    return this.grupoService.findById(id);
+  }
+
+  @Post('novo')
+  @Roles('Grupo', 'Admin')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Cria novo grupo e desativa o anterior do usuário logado',
+  })
+  criarNovoGrupo(@Body() dto: CreateGrupoDto, @Request() req): Promise<Grupo> {
+    const usuarioId = req.user.id || req.user.usuIntId;
+    return this.grupoService.criarNovoGrupo(dto, usuarioId);
+  }
 
   @Put('suspender/:id')
   @Roles('Admin')
@@ -79,8 +129,8 @@ export class GrupoController {
   @Roles('Grupo', 'Admin')
   @HttpCode(HttpStatus.OK)
   update(
-    @Param('id', ParseIntPipe) id: number, 
-    @Body() dto: UpdateGrupoDto
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateGrupoDto,
   ): Promise<Grupo> {
     return this.grupoService.update(id, dto);
   }
@@ -90,7 +140,7 @@ export class GrupoController {
   @HttpCode(HttpStatus.CREATED)
   seCandidatar(
     @Param('demIntId', ParseIntPipe) demIntId: number,
-    @Request() req
+    @Request() req,
   ): Promise<Candidatura> {
     const usuarioId = req.user.id || req.user.usuIntId;
     return this.grupoService.seCandidatar(demIntId, usuarioId);
@@ -101,7 +151,7 @@ export class GrupoController {
   @HttpCode(HttpStatus.NO_CONTENT)
   desistirCandidatura(
     @Param('canIntId', ParseIntPipe) canIntId: number,
-    @Request() req
+    @Request() req,
   ): Promise<void> {
     const usuarioId = req.user.id || req.user.usuIntId;
     return this.grupoService.desistirCandidatura(canIntId, usuarioId);
