@@ -9,12 +9,7 @@ import { Coordenador } from '../coordenador/entities/coordenador.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      Candidatura, 
-      Grupo, 
-      Demanda, 
-      Coordenador
-    ]),
+    TypeOrmModule.forFeature([Candidatura, Grupo, Demanda, Coordenador]),
   ],
   controllers: [CandidaturaController],
   providers: [CandidaturaService],

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -10,12 +11,11 @@ import { UpdateAdminDto } from '../dto/update-admin.dto';
 import { UpdatePapelDto } from '../dto/update-papel.dto';
 import { UpdateDemandaDto } from '../../demanda/dto/update-demanda.dto';
 import { MailService } from '../../mail/mail.service';
+import { LogService } from '../../log/services/log.service';
+import { LogAcao } from '../../log/entities/log-acao.entity';
 
 @Injectable()
 export class AdminService {
-  private auditoriaLogs: any[] = [];
-  private notificationsLogs: any[] = [];
-
   constructor(
     @InjectRepository(Admin)
     private readonly adminRepository: Repository<Admin>,
@@ -25,58 +25,125 @@ export class AdminService {
     private readonly demandaRepository: Repository<Demanda>,
     @InjectRepository(Projeto)
     private readonly projetoRepository: Repository<Projeto>,
+    private readonly logService: LogService,
     private readonly mailService: MailService, // Injetado para cumprir RF-20 e RN-15
   ) {}
 
-  private async registrarAuditoria(acao: string, detalhes: string) {
-    const registro = { acao, detalhes, data: new Date().toISOString() };
-    this.auditoriaLogs.push(registro);
-    console.log(`[AUDITORIA] ${acao} - ${detalhes}`);
+  private async registrarAuditoria(
+    acao: string,
+    entidade: string,
+    entidadeId: number,
+    snapshot: object,
+    atorEmail: string,
+    destinatarioEmail?: string,
+    mensagem?: string,
+  ): Promise<void> {
+    await this.logService.registrar(
+      acao,
+      `Admin (${atorEmail}) realizou: ${acao} em ${entidade} ID=${entidadeId}`,
+      { tipo: 'Admin', email: atorEmail },
+      {
+        entidade,
+        entidadeId,
+        dadosAnteriores: snapshot,
+        destinatarioEmail,
+        mensagemNotificacao: mensagem,
+      },
+    );
+
+    // TODO: ativar quando email estiver configurado para notificações de ações:
+    // if (destinatarioEmail && mensagemNotificacao) {
+    //   await this.mailService.sendGenericEmail(destinatarioEmail, 'Alteração na plataforma Osiris', mensagemNotificacao);
+    //   log.logBoolEmailEnviado = true;
+    //   log.logDateEmailEnviado = new Date();
+    //   await this.logRepository.save(log);
+    // }
   }
 
-  private async notificarAlteracao(emailDestino: string, mensagem: string) {
-    const notificacao = { emailDestino, mensagem, data: new Date().toISOString() };
-    this.notificationsLogs.push(notificacao);
-    console.log(`[NOTIFICAÇÃO] Para: ${emailDestino} - ${mensagem}`);
-    
-    // Dispara a notificação real usando a infraestrutura do MailModule
-    try {
-      await this.mailService.sendConfirmationEmail(emailDestino, `Notificação Osiris: ${mensagem}`);
-    } catch (error) {
-      console.error(`Falha ao disparar e-mail de notificação para ${emailDestino}:`, error);
-    }
-  }
+  // private async notificarAlteracao(emailDestino: string, mensagem: string) {
+  //   const notificacao = {
+  //     emailDestino,
+  //     mensagem,
+  //     data: new Date().toISOString(),
+  //   };
+  //   this.notificationsLogs.push(notificacao);
+  //   console.log(`[NOTIFICAÇÃO] Para: ${emailDestino} - ${mensagem}`);
+
+  //   // Dispara a notificação real usando a infraestrutura do MailModule
+  //   try {
+  //     await this.mailService.sendConfirmationEmail(
+  //       emailDestino,
+  //       `Notificação Osiris: ${mensagem}`,
+  //     );
+  //   } catch (error) {
+  //     console.error(
+  //       `Falha ao disparar e-mail de notificação para ${emailDestino}:`,
+  //       error,
+  //     );
+  //   }
+  // }
 
   async criarAdmin(dto: CreateAdminDto): Promise<Admin> {
     const { usuarioId } = dto;
 
-    const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: usuarioId } });
-    if (!usuario) throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
+    const usuario = await this.usuarioRepository.findOne({
+      where: { usuIntId: usuarioId },
+    });
+    if (!usuario)
+      throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
 
-    const adminExistente = await this.adminRepository.findOne({ where: { usuario: { usuIntId: usuarioId } } });
+    const adminExistente = await this.adminRepository.findOne({
+      where: { usuario: { usuIntId: usuarioId } },
+    });
     if (adminExistente) {
       if (!adminExistente.admBoolAtivo) {
-        throw new HttpException('Este usuário já possui registro de Admin inativo. Use a rota de reativação.', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'Este usuário já possui registro de Admin inativo. Use a rota de reativação.',
+          HttpStatus.BAD_REQUEST,
+        );
       }
-      throw new HttpException('Este usuário já é um administrador ativo', HttpStatus.CONFLICT);
+      throw new HttpException(
+        'Este usuário já é um administrador ativo',
+        HttpStatus.CONFLICT,
+      );
     }
 
     usuario.usuStrTipo = 'Admin';
-    usuario.usuBoolAtivo = true; 
+    usuario.usuBoolAtivo = true;
     await this.usuarioRepository.save(usuario);
 
     const admin = this.adminRepository.create({ usuario, admBoolAtivo: true });
     const novoAdmin = await this.adminRepository.save(admin);
 
-    await this.registrarAuditoria('Criar Admin', `Usuário ID=${usuarioId} promovido a Admin`);
-    await this.notificarAlteracao(usuario.usuStrEmail, 'Sua conta foi promovida ao papel de Administrador no ecossistema Osiris.');
+    await this.registrarAuditoria(
+      'Criar Admin',
+      'Usuario',
+      usuarioId,
+      { usuIntId: usuario.usuIntId, usuStrEmail: usuario.usuStrEmail },
+      usuario.usuStrEmail,
+      usuario.usuStrEmail,
+      'Sua conta foi promovida ao papel de Administrador no ecossistema Osiris.',
+    );
 
     return novoAdmin;
   }
 
-  async updateAdmin(id: number, dto: UpdateAdminDto): Promise<Admin> {
-    const admin = await this.adminRepository.findOne({ where: { admIntId: id }, relations: ['usuario'] });
-    if (!admin) throw new HttpException('Admin não encontrado', HttpStatus.NOT_FOUND);
+  async updateAdmin(
+    id: number,
+    dto: UpdateAdminDto,
+    atorEmail: string,
+  ): Promise<Admin> {
+    const admin = await this.adminRepository.findOne({
+      where: { admIntId: id },
+      relations: ['usuario'],
+    });
+    if (!admin)
+      throw new HttpException('Admin não encontrado', HttpStatus.NOT_FOUND);
+
+    const snapshot = {
+      admIntId: admin.admIntId,
+      admBoolAtivo: admin.admBoolAtivo,
+    };
 
     if (dto.admBolAtivo !== undefined) {
       admin.admBoolAtivo = dto.admBolAtivo;
@@ -87,55 +154,103 @@ export class AdminService {
     }
 
     const adminAtualizado = await this.adminRepository.save(admin);
-    await this.registrarAuditoria('Update Admin', `Configurações do Admin ID=${id} atualizadas`);
+
+    await this.registrarAuditoria(
+      'Atualizar Admin',
+      'Admin',
+      id,
+      snapshot,
+      atorEmail,
+    );
+
     return adminAtualizado;
   }
 
-  async atualizarPapel(usuarioId: number, dto: UpdatePapelDto): Promise<Usuario> {
+  async atualizarPapel(
+    usuarioId: number,
+    dto: UpdatePapelDto,
+    atorEmail: string,
+  ): Promise<Usuario> {
     const { novoPapel } = dto;
 
-    const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: usuarioId } });
-    if (!usuario) throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
+    const usuario = await this.usuarioRepository.findOne({
+      where: { usuIntId: usuarioId },
+    });
+    if (!usuario)
+      throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
 
-    // RN-19: Validação caso o administrador esteja transformando o usuário em um Líder de Grupo
     if (novoPapel === 'Grupo') {
-      const emailInstitucionalRegex = /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
+      const emailInstitucionalRegex =
+        /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
       if (!emailInstitucionalRegex.test(usuario.usuStrEmail)) {
         throw new HttpException(
-          'Incompatibilidade de papel: O usuário alvo não possui um e-mail institucional CPS válido para se tornar um perfil Grupo.',
+          'O usuário não possui e-mail institucional CPS válido para se tornar perfil Grupo.',
           HttpStatus.BAD_REQUEST,
         );
       }
     }
 
     if (usuario.usuStrTipo === 'Admin') {
-      const adminReg = await this.adminRepository.findOne({ where: { usuario: { usuIntId: usuarioId } } });
-      if (adminReg) {
-        await this.adminRepository.delete(adminReg.admIntId);
-      }
+      const adminReg = await this.adminRepository.findOne({
+        where: { usuario: { usuIntId: usuarioId } },
+      });
+      if (adminReg) await this.adminRepository.delete(adminReg.admIntId);
     }
 
+    const snapshot = {
+      usuIntId: usuario.usuIntId,
+      usuStrTipo: usuario.usuStrTipo,
+      usuStrEmail: usuario.usuStrEmail,
+    };
     usuario.usuStrTipo = novoPapel;
     const atualizado = await this.usuarioRepository.save(usuario);
 
-    await this.registrarAuditoria('Atualizar Papel', `Usuário ID=${usuarioId} alterado para papel: ${novoPapel}`);
-    await this.notificarAlteracao(usuario.usuStrEmail, `O perfil da sua conta foi modificado administrativamente para ${novoPapel}.`);
+    await this.registrarAuditoria(
+      'Atualizar Papel',
+      'Usuario',
+      usuarioId,
+      snapshot,
+      atorEmail,
+      usuario.usuStrEmail,
+      `O perfil da sua conta foi modificado administrativamente para ${novoPapel}.`,
+    );
 
     return atualizado;
   }
 
-  async inativarAdmin(id: number, usuarioLogadoId: number): Promise<void> {
-    const admin = await this.adminRepository.findOne({ where: { admIntId: id }, relations: ['usuario'] });
-    if (!admin) throw new HttpException('Admin não encontrado', HttpStatus.NOT_FOUND);
+  async inativarAdmin(
+    id: number,
+    usuarioLogadoId: number,
+    atorEmail: string,
+  ): Promise<void> {
+    const admin = await this.adminRepository.findOne({
+      where: { admIntId: id },
+      relations: ['usuario'],
+    });
+    if (!admin)
+      throw new HttpException('Admin não encontrado', HttpStatus.NOT_FOUND);
 
-    if (admin.usuario && admin.usuario.usuIntId === usuarioLogadoId) {
-      throw new HttpException('Não é permitido inativar a sua própria conta de administrador', HttpStatus.FORBIDDEN);
+    if (admin.usuario?.usuIntId === usuarioLogadoId) {
+      throw new HttpException(
+        'Não é permitido inativar a própria conta de administrador',
+        HttpStatus.FORBIDDEN,
+      );
     }
 
-    const adminsAtivos = await this.adminRepository.count({ where: { admBoolAtivo: true } });
+    const adminsAtivos = await this.adminRepository.count({
+      where: { admBoolAtivo: true },
+    });
     if (adminsAtivos <= 1 && admin.admBoolAtivo) {
-      throw new HttpException('Não é permitido remover ou inativar o único administrador ativo do sistema', HttpStatus.FORBIDDEN);
+      throw new HttpException(
+        'Não é permitido remover o único administrador ativo do sistema',
+        HttpStatus.FORBIDDEN,
+      );
     }
+
+    const snapshot = {
+      admIntId: admin.admIntId,
+      usuStrEmail: admin.usuario?.usuStrEmail,
+    };
 
     admin.admBoolAtivo = false;
     await this.adminRepository.save(admin);
@@ -145,131 +260,280 @@ export class AdminService {
       await this.usuarioRepository.save(admin.usuario);
     }
 
-    await this.registrarAuditoria('Inativar Admin', `Admin ID=${id} e seu utilizador base foram inativados`);
-    if (admin.usuario) {
-      await this.notificarAlteracao(admin.usuario.usuStrEmail, 'Sua credencial administrativa e acesso à plataforma foram desativados.');
-    }
+    await this.registrarAuditoria(
+      'Inativar Admin',
+      'Admin',
+      id,
+      snapshot,
+      atorEmail,
+      admin.usuario?.usuStrEmail,
+      'Sua credencial administrativa e acesso à plataforma foram desativados.',
+    );
   }
 
-  async reativarAdmin(id: number): Promise<Admin> {
-    const admin = await this.adminRepository.findOne({ where: { admIntId: id }, relations: ['usuario'] });
-    if (!admin) throw new HttpException('Admin não encontrado', HttpStatus.NOT_FOUND);
+  async reativarAdmin(id: number, atorEmail: string): Promise<Admin> {
+    const admin = await this.adminRepository.findOne({
+      where: { admIntId: id },
+      relations: ['usuario'],
+    });
+    if (!admin)
+      throw new HttpException('Admin não encontrado', HttpStatus.NOT_FOUND);
 
     admin.admBoolAtivo = true;
     await this.adminRepository.save(admin);
 
     if (admin.usuario) {
       admin.usuario.usuBoolAtivo = true;
-      admin.usuario.usuStrTipo = 'Admin'; 
+      admin.usuario.usuStrTipo = 'Admin';
       await this.usuarioRepository.save(admin.usuario);
     }
 
-    await this.registrarAuditoria('Reativar Admin', `Admin ID=${id} reativado com sucesso`);
-    if (admin.usuario) {
-      await this.notificarAlteracao(admin.usuario.usuStrEmail, 'Seu acesso de administrador à plataforma Osiris foi restabelecido.');
-    }
+    await this.registrarAuditoria(
+      'Reativar Admin',
+      'Admin',
+      id,
+      { admIntId: admin.admIntId },
+      atorEmail,
+      admin.usuario?.usuStrEmail,
+      'Seu acesso de administrador à plataforma Osiris foi restabelecido.',
+    );
 
     return admin;
   }
 
-  async inativarUsuario(id: number): Promise<void> {
-    const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: id } });
-    if (!usuario) throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
-
+  async inativarUsuario(id: number, atorEmail: string): Promise<void> {
+    const usuario = await this.usuarioRepository.findOne({
+      where: { usuIntId: id },
+    });
+    if (!usuario)
+      throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
     if (usuario.usuStrTipo === 'Admin') {
-      throw new HttpException('Não é permitido inativar administradores através desta rota padrão de usuários', HttpStatus.FORBIDDEN);
+      throw new HttpException(
+        'Não é permitido inativar administradores por esta rota.',
+        HttpStatus.FORBIDDEN,
+      );
     }
+
+    const snapshot = {
+      usuIntId: usuario.usuIntId,
+      usuStrNome: usuario.usuStrNome,
+      usuStrEmail: usuario.usuStrEmail,
+      usuStrTipo: usuario.usuStrTipo,
+    };
 
     usuario.usuBoolAtivo = false;
     await this.usuarioRepository.save(usuario);
 
-    await this.registrarAuditoria('Inativar Usuário', `Utilizador ID=${id} foi inativado pelo administrador`);
-    await this.notificarAlteracao(usuario.usuStrEmail, 'Sua conta na plataforma Osiris foi temporariamente desativada pela administração.');
+    await this.registrarAuditoria(
+      'Inativar Usuário',
+      'Usuario',
+      id,
+      snapshot,
+      atorEmail,
+      usuario.usuStrEmail,
+      'Sua conta na plataforma Osiris foi desativada pela administração.',
+    );
   }
 
-  async reativarUsuario(id: number): Promise<Usuario> {
-    const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: id } });
-    if (!usuario) throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
+  async reativarUsuario(id: number, atorEmail: string): Promise<Usuario> {
+    const usuario = await this.usuarioRepository.findOne({
+      where: { usuIntId: id },
+    });
+    if (!usuario)
+      throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
 
     usuario.usuBoolAtivo = true;
     await this.usuarioRepository.save(usuario);
 
-    await this.registrarAuditoria('Reativar Usuário', `Utilizador ID=${id} reativado pelo administrador`);
-    await this.notificarAlteracao(usuario.usuStrEmail, 'Sua conta na plataforma Osiris foi reativada. Você já pode efetuar login novamente.');
+    await this.registrarAuditoria(
+      'Reativar Usuário',
+      'Usuario',
+      id,
+      { usuIntId: usuario.usuIntId, usuStrEmail: usuario.usuStrEmail },
+      atorEmail,
+      usuario.usuStrEmail,
+      'Sua conta na plataforma Osiris foi reativada. Você já pode efetuar login novamente.',
+    );
 
     return usuario;
   }
 
-  async gerenciarDemanda(id: number, dados: UpdateDemandaDto): Promise<Demanda> {
-    const demanda = await this.demandaRepository.findOne({ where: { demIntId: id } });
-    if (!demanda) throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
+  async gerenciarDemanda(
+    id: number,
+    dados: UpdateDemandaDto,
+    atorEmail: string,
+  ): Promise<Demanda> {
+    const demanda = await this.demandaRepository.findOne({
+      where: { demIntId: id },
+      relations: ['empreendedor', 'empreendedor.usuario'],
+    });
+    if (!demanda)
+      throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
+
+    const snapshot = {
+      demIntId: demanda.demIntId,
+      demStrNome: demanda.demStrNome,
+    };
 
     Object.assign(demanda, dados);
-    const demandaAtualizada = await this.demandaRepository.save(demanda);
+    const atualizada = await this.demandaRepository.save(demanda);
 
-    await this.registrarAuditoria('Gerenciar Demanda', `Demanda ID=${id} atualizada administrativamente`);
-    return demandaAtualizada;
+    await this.registrarAuditoria(
+      'Editar Demanda',
+      'Demanda',
+      id,
+      snapshot,
+      atorEmail,
+      demanda.empreendedor?.usuario?.usuStrEmail,
+      `A demanda "${demanda.demStrNome}" foi editada por um administrador.`,
+    );
+
+    return atualizada;
   }
 
-  async moderarEOmitirDemanda(id: number, parecerTecnico: string): Promise<Demanda> {
-    if (!parecerTecnico || parecerTecnico.trim().length === 0) {
-      throw new HttpException('Moderação bloqueada: É obrigatório o preenchimento do parecer técnico justificando a ação', HttpStatus.BAD_REQUEST);
+  async moderarEOmitirDemanda(
+    id: number,
+    parecerTecnico: string,
+    atorEmail: string,
+  ): Promise<Demanda> {
+    if (!parecerTecnico?.trim()) {
+      throw new HttpException(
+        'Parecer técnico obrigatório.',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
-    const demanda = await this.demandaRepository.findOne({ where: { demIntId: id } });
-    if (!demanda) throw new HttpException('Demanda alvo da denúncia não encontrada', HttpStatus.NOT_FOUND);
+    const demanda = await this.demandaRepository.findOne({
+      where: { demIntId: id },
+      relations: ['empreendedor', 'empreendedor.usuario'],
+    });
+    if (!demanda)
+      throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
 
-    demanda.demBoolAtivo = false; 
-    const demandaModerada = await this.demandaRepository.save(demanda);
+    const snapshot = {
+      demIntId: demanda.demIntId,
+      demStrNome: demanda.demStrNome,
+    };
 
-    await this.registrarAuditoria('Moderação de Conteúdo', `Demanda ID=${id} suspensa. Motivo: ${parecerTecnico}`);
+    demanda.demBoolAtivo = false;
+    const moderada = await this.demandaRepository.save(demanda);
 
-    return demandaModerada;
+    await this.registrarAuditoria(
+      'Moderar Demanda',
+      'Demanda',
+      id,
+      snapshot,
+      atorEmail,
+      demanda.empreendedor?.usuario?.usuStrEmail,
+      `A demanda "${demanda.demStrNome}" foi suspensa. Motivo: ${parecerTecnico}`,
+    );
+
+    return moderada;
   }
 
-  async inativarProjeto(id: number): Promise<void> {
-    const proyecto = await this.projetoRepository.findOne({ where: { proIntId: id } });
-    if (!proyecto) throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
+  async inativarProjeto(id: number, atorEmail: string): Promise<void> {
+    const projeto = await this.projetoRepository.findOne({
+      where: { proIntId: id },
+      relations: [
+        'candidatura',
+        'candidatura.grupo',
+        'candidatura.grupo.usuario',
+        'grupo',
+        'grupo.usuario',
+      ],
+    });
+    if (!projeto)
+      throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
 
-    proyecto.proBoolAtivo = false;
-    await this.projetoRepository.save(proyecto);
+    const usuarioEmail =
+      projeto.candidatura?.grupo?.usuario?.usuStrEmail ??
+      projeto.grupo?.usuario?.usuStrEmail ??
+      undefined;
 
-    await this.registrarAuditoria('Inativar Projeto', `Projeto ID=${id} definido como inativo`);
+    const snapshot = {
+      proIntId: projeto.proIntId,
+      proStrDescricao: projeto.proStrDescricao,
+    };
+
+    projeto.proBoolAtivo = false;
+    await this.projetoRepository.save(projeto);
+
+    await this.registrarAuditoria(
+      'Inativar Projeto',
+      'Projeto',
+      id,
+      snapshot,
+      atorEmail,
+      usuarioEmail,
+      `O projeto "${projeto.proStrDescricao}" foi inativado por um administrador.`,
+    );
   }
 
-  async reativarDemanda(id: number): Promise<Demanda> {
-    const demanda = await this.demandaRepository.findOne({ where: { demIntId: id } });
-    if (!demanda) throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
+  async reativarDemanda(id: number, atorEmail: string): Promise<Demanda> {
+    const demanda = await this.demandaRepository.findOne({
+      where: { demIntId: id },
+      relations: ['empreendedor', 'empreendedor.usuario'],
+    });
+    if (!demanda)
+      throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
 
     demanda.demBoolAtivo = true;
     await this.demandaRepository.save(demanda);
 
-    await this.registrarAuditoria('Reativar Demanda', `Demanda ID=${id} reativada com sucesso`);
+    await this.registrarAuditoria(
+      'Reativar Demanda',
+      'Demanda',
+      id,
+      { demIntId: demanda.demIntId, demStrNome: demanda.demStrNome },
+      atorEmail,
+      demanda.empreendedor?.usuario?.usuStrEmail,
+      `A demanda "${demanda.demStrNome}" foi reativada.`,
+    );
+
     return demanda;
   }
 
-  async reativarProjeto(id: number): Promise<Projeto> {
-    const proyecto = await this.projetoRepository.findOne({ where: { proIntId: id } });
-    if (!proyecto) throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
+  async reativarProjeto(id: number, atorEmail: string): Promise<Projeto> {
+    const projeto = await this.projetoRepository.findOne({
+      where: { proIntId: id },
+      relations: [
+        'candidatura',
+        'candidatura.grupo',
+        'candidatura.grupo.usuario',
+        'grupo',
+        'grupo.usuario',
+      ],
+    });
+    if (!projeto)
+      throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
 
-    proyecto.proBoolAtivo = true;
-    await this.projetoRepository.save(proyecto);
+    const usuarioEmail =
+      projeto.candidatura?.grupo?.usuario?.usuStrEmail ??
+      projeto.grupo?.usuario?.usuStrEmail ??
+      undefined;
 
-    await this.registrarAuditoria('Reativar Projeto', `Projeto ID=${id} restaurado`);
-    return proyecto;
+    projeto.proBoolAtivo = true;
+    await this.projetoRepository.save(projeto);
+
+    await this.registrarAuditoria(
+      'Reativar Projeto',
+      'Projeto',
+      id,
+      { proIntId: projeto.proIntId, proStrDescricao: projeto.proStrDescricao },
+      atorEmail,
+      usuarioEmail,
+      `O projeto "${projeto.proStrDescricao}" foi reativado.`,
+    );
+
+    return projeto;
   }
 
   async listarAdmins(): Promise<Admin[]> {
     return this.adminRepository.find({ relations: ['usuario'] });
   }
 
-  async listarAuditoria(): Promise<any[]> {
-    await this.registrarAuditoria('Consultar Logs', 'Administrador visualizou a listagem de Logs Globais');
-    return this.auditoriaLogs;
-  }
-
-  async listarNotificacoes(): Promise<any[]> {
-    return this.notificationsLogs;
+  async listarAuditoria(): Promise<LogAcao[]> {
+    return this.logService.listar();
   }
 
   async getEstatisticas(): Promise<any> {
@@ -278,14 +542,35 @@ export class AdminService {
     const totalProjetos = await this.projetoRepository.count();
     const totalAdmins = await this.adminRepository.count();
 
-    await this.registrarAuditoria('Consultar Estatísticas', 'Administrador emitiu relatório de dados analíticos gerais');
+    const porTipo = await this.usuarioRepository
+      .createQueryBuilder('u')
+      .select('u.usuStrTipo', 'tipo')
+      .addSelect('COUNT(*)', 'total')
+      .groupBy('u.usuStrTipo')
+      .getRawMany();
+
+    const usuariosPorTipo = {
+      empreendedores: 0,
+      coordenadores: 0,
+      grupos: 0,
+      admins: 0,
+    };
+    for (const row of porTipo) {
+      if (row.tipo === 'Empreendedor')
+        usuariosPorTipo.empreendedores = Number(row.total);
+      if (row.tipo === 'Coordenador')
+        usuariosPorTipo.coordenadores = Number(row.total);
+      if (row.tipo === 'Grupo') usuariosPorTipo.grupos = Number(row.total);
+      if (row.tipo === 'Admin') usuariosPorTipo.admins = Number(row.total);
+    }
 
     return {
       totalUsuarios,
       totalDemandas,
       totalProjetos,
       totalAdmins,
-      timestamp: new Date().toISOString()
+      usuariosPorTipo,
+      timestamp: new Date().toISOString(),
     };
   }
 }

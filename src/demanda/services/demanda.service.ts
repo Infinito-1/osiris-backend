@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
@@ -6,6 +7,8 @@ import { CreateDemandaDto } from '../dto/create-demanda.dto';
 import { UpdateDemandaDto } from '../dto/update-demanda.dto';
 import { TipoDemanda } from '../../tipo_demanda/entities/tipo_demanda.entity';
 import { TipoDemandaService } from '../../tipo_demanda/services/tipo_demanda.services';
+import { LogService } from '../../log/services/log.service';
+import { Candidatura } from '../../candidatura/entities/candidatura.entity';
 
 @Injectable()
 export class DemandaService {
@@ -13,12 +16,21 @@ export class DemandaService {
     @InjectRepository(Demanda)
     private readonly demandaRepository: Repository<Demanda>,
     private readonly tipoDemandaService: TipoDemandaService,
+    private readonly logService: LogService,
+    @InjectRepository(Candidatura)
+    private readonly candidaturaRepository: Repository<Candidatura>,
   ) {}
 
   // Usado por Admins e Coordenadores para ver TODAS as demandas no painel gerencial de triagem
   async findAll(): Promise<Demanda[]> {
     return this.demandaRepository.find({
-      relations: ['semestre', 'empreendedor', 'empreendedor.usuario', 'coordenador', 'tipo'],
+      relations: [
+        'semestre',
+        'empreendedor',
+        'empreendedor.usuario',
+        'coordenador',
+        'tipo',
+      ],
     });
   }
 
@@ -35,10 +47,19 @@ export class DemandaService {
   async findById(id: number): Promise<Demanda> {
     const demanda = await this.demandaRepository.findOne({
       where: { demIntId: id },
-      relations: ['semestre', 'empreendedor', 'empreendedor.usuario', 'coordenador', 'tipo'],
+      relations: [
+        'semestre',
+        'empreendedor',
+        'empreendedor.usuario',
+        'coordenador',
+        'tipo',
+      ],
     });
     if (!demanda) {
-      throw new HttpException('Demanda não encontrada no sistema', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Demanda não encontrada no sistema',
+        HttpStatus.NOT_FOUND,
+      );
     }
     return demanda;
   }
@@ -49,7 +70,11 @@ export class DemandaService {
 
   async findByNome(nome: string): Promise<Demanda[]> {
     return this.demandaRepository.find({
-      where: { demStrNome: ILike(`%${nome}%`), demBoolAtivo: true, demBoolAceitacao: true },
+      where: {
+        demStrNome: ILike(`%${nome}%`),
+        demBoolAtivo: true,
+        demBoolAceitacao: true,
+      },
       relations: ['semestre', 'empreendedor', 'coordenador', 'tipo'],
     });
   }
@@ -101,9 +126,11 @@ export class DemandaService {
 
     if (dto.demStrNome) demanda.demStrNome = dto.demStrNome;
     if (dto.demStrDescricao) demanda.demStrDescricao = dto.demStrDescricao;
-    if (dto.demBoolAceitaMudancaTipo !== undefined) demanda.demBoolAceitaMudancaTipo = dto.demBoolAceitaMudancaTipo;
-    
-    if (dto.demBoolExibirContato !== undefined) demanda.demBoolExibirContato = dto.demBoolExibirContato;
+    if (dto.demBoolAceitaMudancaTipo !== undefined)
+      demanda.demBoolAceitaMudancaTipo = dto.demBoolAceitaMudancaTipo;
+
+    if (dto.demBoolExibirContato !== undefined)
+      demanda.demBoolExibirContato = dto.demBoolExibirContato;
     if (dto.demBoolAceitacao !== undefined) {
       demanda.demBoolAceitacao = dto.demBoolAceitacao;
     }
@@ -138,8 +165,43 @@ export class DemandaService {
     return this.demandaRepository.save(demanda);
   }
 
-  async delete(id: number): Promise<void> {
-    await this.findOneInternal(id);
+  async delete(
+    id: number,
+    ator: { tipo: 'Admin' | 'Coordenador'; email?: string },
+  ): Promise<void> {
+    const demanda = await this.demandaRepository.findOne({
+      where: { demIntId: id },
+      relations: ['candidatura', 'empreendedor', 'empreendedor.usuario'],
+    });
+    if (!demanda)
+      throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
+
+    const snapshot = {
+      demIntId: demanda.demIntId,
+      demStrNome: demanda.demStrNome,
+      destinatarioEmail: demanda.empreendedor?.usuario?.usuStrEmail,
+    };
+
+    // Remove candidaturas vinculadas antes de excluir a demanda
+    if (demanda.candidatura?.length) {
+      await this.candidaturaRepository.delete(
+        demanda.candidatura.map((c) => c.canIntId),
+      );
+    }
+
     await this.demandaRepository.delete(id);
+
+    await this.logService.registrar(
+      'Excluir Demanda',
+      `${ator.tipo} (${ator.email ?? 'sistema'}) excluiu a demanda "${demanda.demStrNome}" ID=${id} e ${demanda.candidatura?.length ?? 0} candidatura(s) vinculada(s)`,
+      ator,
+      {
+        entidade: 'Demanda',
+        entidadeId: id,
+        dadosAnteriores: snapshot,
+        destinatarioEmail: demanda.empreendedor?.usuario?.usuStrEmail,
+        mensagemNotificacao: `A demanda "${demanda.demStrNome}" foi removida da plataforma Osiris.`,
+      },
+    );
   }
 }

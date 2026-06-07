@@ -1,6 +1,17 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
-  Controller, Post, Body, Delete, Param, Get, ParseIntPipe, Put,
-  UseGuards, HttpCode, HttpStatus, Req
+  Controller,
+  Post,
+  Body,
+  Delete,
+  Param,
+  Get,
+  ParseIntPipe,
+  Put,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  Req,
 } from '@nestjs/common';
 import { AdminService } from '../services/admin.service';
 import { CreateAdminDto } from '../dto/create-admin.dto';
@@ -29,29 +40,46 @@ export class AdminController {
 
   @Put(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Atualiza propriedades cadastrais do administrador' })
-  updateAdmin(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateAdminDto) {
+  @ApiResponse({
+    status: 200,
+    description: 'Atualiza propriedades cadastrais do administrador',
+  })
+  updateAdmin(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateAdminDto,
+  ) {
     return this.adminService.updateAdmin(id, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiResponse({ status: 204, description: 'Inativa um administrador pelo ID protegendo contra auto-exclusão' })
+  @ApiResponse({
+    status: 204,
+    description:
+      'Inativa um administrador pelo ID protegendo contra auto-exclusão',
+  })
   removerAdmin(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    const usuarioLogadoId = req.user?.id || req.user?.usuIntId; 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const usuarioLogadoId = req.user?.id || req.user?.usuIntId;
     return this.adminService.inativarAdmin(id, Number(usuarioLogadoId));
   }
 
   @Put(':id/reativar')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Reativa um administrador desativado' })
+  @ApiResponse({
+    status: 200,
+    description: 'Reativa um administrador desativado',
+  })
   reativarAdmin(@Param('id', ParseIntPipe) id: number) {
     return this.adminService.reativarAdmin(id);
   }
 
   @Put('usuario/:id/papel')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Atualiza o papel de um usuário comum' })
+  @ApiResponse({
+    status: 200,
+    description: 'Atualiza o papel de um usuário comum',
+  })
   atualizarPapel(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdatePapelDto,
@@ -61,14 +89,20 @@ export class AdminController {
 
   @Delete('usuario/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiResponse({ status: 204, description: 'Inativa um usuário padrão pelo ID (Soft Delete)' })
+  @ApiResponse({
+    status: 204,
+    description: 'Inativa um usuário padrão pelo ID (Soft Delete)',
+  })
   excluirUsuario(@Param('id', ParseIntPipe) id: number) {
     return this.adminService.inativarUsuario(id);
   }
 
   @Put('usuario/:id/reativar')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Reativa um usuário comum desativado' })
+  @ApiResponse({
+    status: 200,
+    description: 'Reativa um usuário comum desativado',
+  })
   reativarUsuario(@Param('id', ParseIntPipe) id: number) {
     return this.adminService.reativarUsuario(id);
   }
@@ -76,66 +110,85 @@ export class AdminController {
   @Put('demanda/:id')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, description: 'Gerencia uma demanda existente' })
-  gerenciarDemanda(@Param('id', ParseIntPipe) id: number, @Body() dados: UpdateDemandaDto) {
+  gerenciarDemanda(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dados: UpdateDemandaDto,
+  ) {
     return this.adminService.gerenciarDemanda(id, dados);
   }
 
   @Put('demanda/:id/moderar')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Modera e oculta uma demanda inadequada através de denúncia (UC-24)' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Modera e oculta uma demanda inadequada através de denúncia (UC-24)',
+  })
   moderarDemanda(
-    @Param('id', ParseIntPipe) id: number, 
-    @Body('parecerTecnico') parecerTecnico: string
+    @Param('id', ParseIntPipe) id: number,
+    @Body('parecerTecnico') parecerTecnico: string,
   ) {
     return this.adminService.moderarEOmitirDemanda(id, parecerTecnico);
   }
 
   @Put('demanda/:id/reativar')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Restaura a visualização de uma demanda inativada' })
+  @ApiResponse({
+    status: 200,
+    description: 'Restaura a visualização de uma demanda inativada',
+  })
   reativarDemanda(@Param('id', ParseIntPipe) id: number) {
     return this.adminService.reativarDemanda(id);
   }
 
   @Delete('projeto/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiResponse({ status: 204, description: 'Inativa um projeto pelo ID (Soft Delete)' })
+  @ApiResponse({
+    status: 204,
+    description: 'Inativa um projeto pelo ID (Soft Delete)',
+  })
   excluirProjeto(@Param('id', ParseIntPipe) id: number) {
     return this.adminService.inativarProjeto(id);
   }
 
   @Put('projeto/:id/reativar')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Restaura a atividade operacional de um projeto' })
+  @ApiResponse({
+    status: 200,
+    description: 'Restaura a atividade operacional de um projeto',
+  })
   reativarProjeto(@Param('id', ParseIntPipe) id: number) {
-    return this.adminService.reativarProjeto(id);
+    const ator = { tipo: 'Admin' as const, email: req.user?.email ?? 'admin' };
+    return this.adminService.reativarProjeto(id, ator);
   }
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Lista todos os administradores cadastrados' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista todos os administradores cadastrados',
+  })
   listarAdmins() {
     return this.adminService.listarAdmins();
   }
 
   @Get('estatisticas')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Retorna estatísticas gerais de uso do ecossistema' })
+  @ApiResponse({
+    status: 200,
+    description: 'Retorna estatísticas gerais de uso do ecossistema',
+  })
   getEstatisticas() {
     return this.adminService.getEstatisticas();
   }
 
   @Get('auditoria')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Lista registros da trilha de auditoria global' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista registros da trilha de auditoria global',
+  })
   listarAuditoria() {
     return this.adminService.listarAuditoria();
-  }
-
-  @Get('notificacoes')
-  @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Lista o histórico de logs de notificações disparadas' })
-  listarNotificacoes() {
-    return this.adminService.listarNotificacoes();
   }
 }

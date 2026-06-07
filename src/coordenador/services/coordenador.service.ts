@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -10,6 +11,7 @@ import { UpdateCoordenadorDto } from '../dto/update-coordenador.dto';
 import { ClassificarDemandaDto } from '../dto/classificar-demanda.dto';
 import { GerenciarCandidaturaDto } from '../dto/gerenciar-candidatura.dto';
 import { MailService } from '../../mail/mail.service';
+import { LogService } from '../../log/services/log.service';
 
 @Injectable()
 export class CoordenadorService {
@@ -23,7 +25,31 @@ export class CoordenadorService {
     @InjectRepository(Candidatura)
     private readonly candidaturaRepository: Repository<Candidatura>,
     private readonly mailService: MailService,
+    private readonly logService: LogService,
   ) {}
+
+  private async log(
+    acao: string,
+    entidade: string,
+    entidadeId: number,
+    snapshot: object,
+    atorEmail: string,
+    destinatarioEmail?: string,
+    mensagem?: string,
+  ) {
+    await this.logService.registrar(
+      acao,
+      `Coordenador (${atorEmail}) realizou: ${acao} em ${entidade} ID=${entidadeId}`,
+      { tipo: 'Coordenador', email: atorEmail },
+      {
+        entidade,
+        entidadeId,
+        dadosAnteriores: snapshot,
+        destinatarioEmail,
+        mensagemNotificacao: mensagem,
+      },
+    );
+  }
 
   async findAll(): Promise<Coordenador[]> {
     return this.coordenadorRepository.find({ relations: ['usuario'] });
@@ -162,7 +188,7 @@ export class CoordenadorService {
     return this.demandaRepository.save(demanda);
   }
 
-  async aprovarDemanda(demIntId: number): Promise<Demanda> {
+  async aprovarDemanda(demIntId: number, atorEmail: string): Promise<Demanda> {
     const demanda = await this.demandaRepository.findOne({
       where: { demIntId },
       relations: ['empreendedor', 'empreendedor.usuario'],
@@ -187,6 +213,16 @@ export class CoordenadorService {
 
     const demandaSalva = await this.demandaRepository.save(demanda);
 
+    await this.log(
+      'Aprovar Demanda',
+      'Demanda',
+      demIntId,
+      { demStrNome: demanda.demStrNome },
+      atorEmail,
+      demanda.empreendedor?.usuario?.usuStrEmail,
+      `Sua demanda "${demanda.demStrNome}" foi aprovada e publicada na galeria.`,
+    );
+
     if (demanda.empreendedor?.usuario?.usuStrEmail) {
       try {
         await this.mailService.sendDemandaAprovadaEmail(
@@ -204,7 +240,11 @@ export class CoordenadorService {
     return demandaSalva;
   }
 
-  async rejeitarDemanda(demIntId: number, motivo?: string): Promise<Demanda> {
+  async rejeitarDemanda(
+    demIntId: number,
+    atorEmail: string,
+    motivo?: string,
+  ): Promise<Demanda> {
     const demanda = await this.demandaRepository.findOne({
       where: { demIntId },
       relations: ['empreendedor', 'empreendedor.usuario'],
@@ -219,6 +259,16 @@ export class CoordenadorService {
     demanda.demBoolAtivo = false;
     demanda.demStrMotivoRejeicao = motivo ?? undefined;
     const demandaSalva = await this.demandaRepository.save(demanda);
+
+    await this.log(
+      'Rejeitar Demanda',
+      'Demanda',
+      demIntId,
+      { demStrNome: demanda.demStrNome, motivo },
+      atorEmail,
+      demanda.empreendedor?.usuario?.usuStrEmail,
+      `Sua demanda "${demanda.demStrNome}" foi rejeitada. Motivo: ${motivo ?? 'não informado'}.`,
+    );
 
     if (demanda.empreendedor?.usuario?.usuStrEmail) {
       try {
@@ -236,6 +286,7 @@ export class CoordenadorService {
 
   async gerenciarCandidaturas(
     dto: GerenciarCandidaturaDto,
+    atorEmail: string,
   ): Promise<Candidatura> {
     const candidatura = await this.candidaturaRepository.findOne({
       where: { canIntId: dto.candidaturaId },
@@ -258,6 +309,16 @@ export class CoordenadorService {
     }
 
     const candidaturaSalva = await this.candidaturaRepository.save(candidatura);
+
+    await this.log(
+      `${dto.status === 'Aceita' ? 'Aceitar' : 'Recusar'} Candidatura`,
+      'Candidatura',
+      dto.candidaturaId,
+      { canStrStatus: dto.status, demStrNome: candidatura.demanda?.demStrNome },
+      atorEmail,
+      candidatura.grupo?.usuario?.usuStrEmail,
+      `Sua candidatura para "${candidatura.demanda?.demStrNome}" foi ${dto.status === 'Aceita' ? 'aceita' : 'recusada'}.`,
+    );
 
     if (candidatura.grupo?.usuario?.usuStrEmail) {
       try {

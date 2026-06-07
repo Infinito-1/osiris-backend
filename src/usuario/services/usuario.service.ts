@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -21,7 +22,9 @@ export class UsuarioService {
   }
 
   async findById(id: number): Promise<Usuario> {
-    const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: id } });
+    const usuario = await this.usuarioRepository.findOne({
+      where: { usuIntId: id },
+    });
     if (!usuario) {
       throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
     }
@@ -40,7 +43,8 @@ export class UsuarioService {
 
     // Regra: Líderes de grupo precisam de e-mail institucional CPS
     if (dto.usuStrTipo === 'Grupo') {
-      const emailInstitucionalRegex = /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
+      const emailInstitucionalRegex =
+        /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
       if (!emailInstitucionalRegex.test(dto.usuStrEmail)) {
         throw new HttpException(
           'Líderes de grupo devem utilizar um e-mail institucional válido do CPS (ex: @aluno.cps.sp.gov.br).',
@@ -50,23 +54,28 @@ export class UsuarioService {
     }
 
     // Regra: Apenas Admin cria Coordenador
-    if (dto.usuStrTipo === 'Coordenador' && requester?.role !== 'Admin') {
-      throw new HttpException(
-        'Apenas administradores do sistema podem criar contas do tipo Coordenador.',
-        HttpStatus.FORBIDDEN,
-      );
+    if (dto.usuStrTipo === 'Coordenador') {
+      if (!requester || requester.role !== 'Admin') {
+        throw new HttpException(
+          'Apenas administradores podem criar contas do tipo Coordenador.',
+          HttpStatus.FORBIDDEN,
+        );
+      }
     }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(dto.usuStrSenha, salt);
     const tokenConfirmacao = crypto.randomBytes(32).toString('hex');
 
+    const criadoPorAdmin = requester?.role === 'Admin';
+
+
     const novoUsuario = this.usuarioRepository.create({
       ...dto,
       usuStrSenha: hashedPassword,
-      usuBoolAtivo: false, // Fica inativo até confirmar por e-mail
-      usuBoolConfirmado: false,
-      usuStrTokenConfirmacao: tokenConfirmacao,
+      usuBoolAtivo: criadoPorAdmin ? true : false, // Fica inativo até confirmar por e-mail se não for criado por admin
+      usuBoolConfirmado: criadoPorAdmin ? true : false,
+      usuStrTokenConfirmacao: criadoPorAdmin ? null : tokenConfirmacao,
     });
 
     const usuarioSalvo = await this.usuarioRepository.save(novoUsuario);

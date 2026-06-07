@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Get,
@@ -159,8 +162,9 @@ export class CoordenadorController {
     status: 400,
     description: 'Aprovação negada: demanda não classificada.',
   })
-  aprovarDemanda(@Param('id', ParseIntPipe) id: number) {
-    return this.coordenadorService.aprovarDemanda(id);
+  aprovarDemanda(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    const atorEmail = req.user?.email ?? 'coordenador';
+    return this.coordenadorService.aprovarDemanda(id, atorEmail);
   }
 
   @Put('demanda/:id/rejeitar')
@@ -168,8 +172,10 @@ export class CoordenadorController {
   rejeitarDemanda(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: RejeitarDemandaDto,
+    @Req() req: any,
   ) {
-    return this.coordenadorService.rejeitarDemanda(id, dto.motivo);
+    const atorEmail = req.user?.email ?? 'coordenador';
+    return this.coordenadorService.rejeitarDemanda(id, dto.motivo, atorEmail);
   }
 
   @Put('candidaturas/gerenciar')
@@ -182,7 +188,8 @@ export class CoordenadorController {
     status: 200,
     description: 'Status atualizado e e-mail enviado ao líder do grupo.',
   })
-  gerenciarCandidaturas(@Body() dto: GerenciarCandidaturaDto) {
-    return this.coordenadorService.gerenciarCandidaturas(dto);
+  gerenciarCandidaturas(@Body() dto: GerenciarCandidaturaDto, @Req() req: any) {
+    const atorEmail = req.user?.email ?? 'coordenador';
+    return this.coordenadorService.gerenciarCandidaturas(dto, atorEmail);
   }
 }
