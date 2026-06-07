@@ -1,41 +1,74 @@
 import { Injectable } from '@nestjs/common';
-import { MailerService } from '@nestjs-modules/mailer';
+import { SMTPClient } from 'emailjs';
 
 @Injectable()
 export class MailService {
-  constructor(private readonly mailerService: MailerService) {}
+  private client: SMTPClient;
 
-  async sendConfirmationEmail(email: string, token: string): Promise<void> {
-    await this.mailerService.sendMail({
-      to: email,
-      subject: 'Confirme sua conta no Osiris',
-      text: `Olá! Obrigado por se cadastrar. Clique no link para confirmar e ativar sua conta: https://osiris.com/usuarios/confirmar/${token}`,
+  constructor() {
+    // Configuração utilizando os dados do Mailtrap
+    this.client = new SMTPClient({
+      user: 'b235f87a208955',          // Seu usuário do Mailtrap
+      password: '4f88d37b35d02c', // Sua senha do Mailtrap
+      host: 'sandbox.smtp.mailtrap.io',
+      port: 2525,
+      ssl: false,
+      tls: true,
     });
   }
 
-  async sendResetPasswordEmail(email: string, token: string): Promise<void> {
-    await this.mailerService.sendMail({
-      to: email,
-      subject: 'Recuperação de senha - Osiris',
-      text: `Você solicitou uma alteração de senha. Clique no link para redefinir sua senha: https://osiris.com/usuarios/resetar-senha/${token}`,
+  private async sendMail(to: string, subject: string, text: string) {
+    return new Promise((resolve, reject) => {
+      this.client.send(
+        {
+          text,
+          from: 'osiris@projeto.com', // Remetente fictício
+          to,
+          subject,
+        },
+        (err, message) => {
+          if (err) reject(err);
+          else resolve(message);
+        }
+      );
     });
   }
 
-  // RN-15 & RF-20: Notificação enviada ao Empreendedor quando sua Demanda é aprovada
-  async sendDemandaAprovadaEmail(email: string, nomeDemanda: string): Promise<void> {
-    await this.mailerService.sendMail({
-      to: email,
-      subject: 'Osíris - Sua demanda foi aprovada!',
-      text: `Olá! Temos boas notícias.\n\nSua demanda "${nomeDemanda}" foi classificada e aprovada pelo coordenador da instituição. Ela já está publicada na galeria do ecossistema Osíris e aberta para receber candidaturas de grupos de estudantes.\n\nAcompanhe o progresso pelo seu painel.`,
-    });
+  async sendConfirmationEmail(to: string, codigo: string) {
+    return this.sendMail(
+      to,
+      'Confirme sua conta no Osiris',
+      `Olá!
+
+Seu código de confirmação é: ${codigo}
+
+Digite esse código no sistema para ativar sua conta.
+
+Se você não solicitou, ignore este email.`
+    );
   }
 
-  // RN-15 & RF-20: Notificação enviada ao Líder do Grupo sobre a candidatura
-  async sendStatusCandidaturaEmail(email: string, nomeDemanda: string, status: string): Promise<void> {
-    await this.mailerService.sendMail({
-      to: email,
-      subject: `Osíris - Atualização de Candidatura: ${status}`,
-      text: `Olá!\n\nO coordenador responsável revisou a candidatura do seu grupo para a demanda "${nomeDemanda}".\n\nO status atual da sua intenção de projeto foi atualizado para: ${status}.\n\nCaso tenha sido "Aceita", verifique as diretrizes no painel do grupo para iniciar o alinhamento com o empreendedor.`,
-    });
+  async sendResetPasswordEmail(to: string, token: string) {
+    return this.sendMail(
+      to,
+      'Recuperação de senha - Osiris',
+      `Clique no link para redefinir sua senha: https://osiris.com/usuarios/resetar-senha/${token}`
+    );
+  }
+
+  async sendDemandaAprovadaEmail(to: string, nomeDemanda: string) {
+    return this.sendMail(
+      to,
+      'Osíris - Sua demanda foi aprovada!',
+      `Sua demanda "${nomeDemanda}" foi aprovada e já está publicada na galeria do Osíris.`
+    );
+  }
+
+  async sendStatusCandidaturaEmail(to: string, nomeDemanda: string, status: string) {
+    return this.sendMail(
+      to,
+      `Osíris - Atualização de Candidatura: ${status}`,
+      `O status da candidatura para a demanda "${nomeDemanda}" foi atualizado para: ${status}.`
+    );
   }
 }

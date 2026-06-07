@@ -20,7 +20,6 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@nestjs-modules/mailer": "^2.3.6",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.1",
@@ -32,6 +31,7 @@
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
+    "emailjs": "^5.0.1",
     "nodemailer": "^8.0.7",
     "passport": "^0.7.0",
     "passport-azure-ad": "^4.3.5",

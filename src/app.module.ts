@@ -17,6 +17,7 @@ import { TipoDemandaModule } from './tipo_demanda/tipo_demanda.module';
 import { UsuarioModule } from './usuario/usuario.module';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module'; 
+import { MailModule } from './mail/mail.module'; // ✅ importa o módulo de email
 
 @Module({
   imports: [
@@ -36,7 +37,8 @@ import { AuthModule } from './auth/auth.module';
     TipoDemandaModule,
     UsuarioModule,
     AdminModule,
-    AuthModule, // 🔑 JWT disponível em toda a aplicação
+    AuthModule,
+    MailModule, // ✅ agora o MailController fica disponível
   ],
   controllers: [AppController],
   providers: [],

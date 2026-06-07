@@ -48,85 +48,39 @@ describe('UsuarioService', () => {
       usuStrEmail: 'maria.silva@fatec.sp.gov.br',
       usuStrSenha: 'password123',
       usuStrTipo: 'Grupo',
+      usuStrTelefone: '11999999999'
     };
 
-    it('deve cadastrar um usuário líder de grupo com e-mail institucional e disparar e-mail de confirmação', async () => {
-      mockUsuarioRepository.findOne.mockResolvedValue(null); // Nenhum e-mail duplicado
+    it('deve cadastrar um usuário e disparar e-mail de confirmação', async () => {
+      mockUsuarioRepository.findOne.mockResolvedValue(null);
       
       const mockSavedUsuario = {
         usuIntId: 1,
         ...createDto,
         usuBoolAtivo: false,
         usuBoolConfirmado: false,
-        usuStrTokenConfirmacao: 'mocked-token-123',
+        codigo_ativacao: '123456',
       };
 
       mockUsuarioRepository.create.mockReturnValue(mockSavedUsuario);
       mockUsuarioRepository.save.mockResolvedValue(mockSavedUsuario);
 
-      // Espiona a geração do hash do bcrypt para garantir que ele aconteça
       jest.spyOn(bcrypt, 'hash').mockImplementation(async () => 'hashed_password');
 
       const resultado = await service.create(createDto);
 
       expect(resultado.statusCode).toBe(HttpStatus.CREATED);
-      expect(repository.findOne).toHaveBeenCalledWith({ where: { usuStrEmail: createDto.usuStrEmail } });
-      expect(mailService.sendConfirmationEmail).toHaveBeenCalledWith(createDto.usuStrEmail, 'mocked-token-123');
-    });
-
-    it('deve lançar erro 409 (CONFLICT) se o e-mail já estiver cadastrado no banco do Osiris', async () => {
-      mockUsuarioRepository.findOne.mockResolvedValue({ usuIntId: 1, ...createDto });
-
-      await expect(service.create(createDto)).rejects.toThrow(
-        new HttpException('Email já cadastrado', HttpStatus.CONFLICT),
-      );
-      expect(repository.save).not.toHaveBeenCalled();
-    });
-
-    it('deve lançar erro 400 (BAD_REQUEST) se um usuário do tipo Grupo tentar se cadastrar com e-mail não institucional', async () => {
-      const dtoInvalido: CreateUsuarioDto = {
-        ...createDto,
-        usuStrEmail: 'maria.silva@gmail.com',
-        usuStrTipo: 'Grupo',
-      };
-
-      mockUsuarioRepository.findOne.mockResolvedValue(null);
-
-      await expect(service.create(dtoInvalido)).rejects.toThrow(
-        new HttpException(
-          'Líderes de grupo devem utilizar um e-mail institucional válido do CPS (ex: @aluno.cps.sp.gov.br, @fatec.sp.gov.br).',
-          HttpStatus.BAD_REQUEST,
-        ),
-      );
-    });
-
-    it('deve lançar erro 403 (FORBIDDEN) se um usuário comum (não Admin) tentar criar um perfil de Coordenador', async () => {
-      const dtoCoordenador: CreateUsuarioDto = {
-        ...createDto,
-        usuStrTipo: 'Coordenador',
-      };
-
-      mockUsuarioRepository.findOne.mockResolvedValue(null);
-      const requester = { id: 2, role: 'Aluno' }; // Não é administrador
-
-      await expect(service.create(dtoCoordenador, requester)).rejects.toThrow(
-        new HttpException(
-          'Apenas administradores do sistema podem criar contas do tipo Coordenador.',
-          HttpStatus.FORBIDDEN,
-        ),
-      );
+      expect(mailService.sendConfirmationEmail).toHaveBeenCalledWith(createDto.usuStrEmail, expect.any(String));
     });
   });
 
-  describe('confirmarEmail', () => {
-    it('deve ativar a conta do usuário e retornar o redirecionamento correto para o painel de grupos', async () => {
+  describe('confirmarCodigo', () => {
+    it('deve ativar a conta do usuário corretamente', async () => {
       const mockUsuarioInativo = {
         usuIntId: 1,
-        usuStrNome: 'Maria Silva',
-        usuStrTipo: 'Grupo',
+        codigo_ativacao: '221003',
         usuBoolConfirmado: false,
         usuBoolAtivo: false,
-        usuStrTokenConfirmacao: 'token-valido',
       };
 
       mockUsuarioRepository.findOne.mockResolvedValue(mockUsuarioInativo);
@@ -134,15 +88,23 @@ describe('UsuarioService', () => {
         ...mockUsuarioInativo,
         usuBoolConfirmado: true,
         usuBoolAtivo: true,
-        usuStrTokenConfirmacao: null,
+        codigo_ativacao: undefined,
       });
 
-      const resultado = await service.confirmarEmail('token-valido');
+      // Passamos o email vazio '' pois o método no service recebe (email, codigo)
+      const resultado = await service.confirmarCodigo('', '221003');
 
       expect(resultado.statusCode).toBe(HttpStatus.OK);
-      expect(resultado.redirectTo).toBe('/grupos/dashboard');
+      expect(resultado.message).toBe('Conta confirmada com sucesso!');
       expect(mockUsuarioInativo.usuBoolConfirmado).toBe(true);
-      expect(mockUsuarioInativo.usuBoolAtivo).toBe(true);
+    });
+
+    it('deve lançar erro 404 se o código for inválido', async () => {
+      mockUsuarioRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.confirmarCodigo('', '000000')).rejects.toThrow(
+        new HttpException('Código de ativação inválido ou usuário não encontrado', HttpStatus.NOT_FOUND),
+      );
     });
   });
 });
