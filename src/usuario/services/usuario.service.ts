@@ -69,7 +69,6 @@ export class UsuarioService {
 
     const criadoPorAdmin = requester?.role === 'Admin';
 
-
     const novoUsuario = this.usuarioRepository.create({
       ...dto,
       usuStrSenha: hashedPassword,
@@ -84,26 +83,35 @@ export class UsuarioService {
     this.mailService
       .sendConfirmationEmail(usuarioSalvo.usuStrEmail, tokenConfirmacao)
       .catch((err) => {
-        console.error("ERRO NO ENVIO DE EMAIL (ignorado para não derrubar o cadastro):", err);
+        console.error(
+          'ERRO NO ENVIO DE EMAIL (ignorado para não derrubar o cadastro):',
+          err,
+        );
       });
 
     return {
       statusCode: HttpStatus.CREATED,
-      message: 'Usuário cadastrado com sucesso no Osiris! Por favor, verifique seu e-mail para confirmar a conta.',
+      message:
+        'Usuário cadastrado com sucesso no Osiris! Por favor, verifique seu e-mail para confirmar a conta.',
       dados: {
         id: usuarioSalvo.usuIntId,
         nome: usuarioSalvo.usuStrNome,
         email: usuarioSalvo.usuStrEmail,
         tipo: usuarioSalvo.usuStrTipo,
-      }
+      },
     };
   }
 
   async confirmarEmail(token: string): Promise<any> {
-    const usuario = await this.usuarioRepository.findOne({ where: { usuStrTokenConfirmacao: token } });
-    
+    const usuario = await this.usuarioRepository.findOne({
+      where: { usuStrTokenConfirmacao: token },
+    });
+
     if (!usuario) {
-      throw new HttpException('Token de confirmação inválido ou expirado.', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Token de confirmação inválido ou expirado.',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     usuario.usuBoolConfirmado = true;
@@ -113,9 +121,12 @@ export class UsuarioService {
     await this.usuarioRepository.save(usuario);
 
     let rotaRedirecionamento = '/grupos/dashboard';
-    if (usuario.usuStrTipo === 'Empreendedor') rotaRedirecionamento = '/empreendedores/dashboard';
-    if (usuario.usuStrTipo === 'Coordenador') rotaRedirecionamento = '/coordenadores/dashboard';
-    if (usuario.usuStrTipo === 'Admin') rotaRedirecionamento = '/admin/dashboard';
+    if (usuario.usuStrTipo === 'Empreendedor')
+      rotaRedirecionamento = '/empreendedores/dashboard';
+    if (usuario.usuStrTipo === 'Coordenador')
+      rotaRedirecionamento = '/coordenadores/dashboard';
+    if (usuario.usuStrTipo === 'Admin')
+      rotaRedirecionamento = '/admin/dashboard';
 
     return {
       statusCode: HttpStatus.OK,
@@ -124,7 +135,11 @@ export class UsuarioService {
     };
   }
 
-  async update(id: number, dto: UpdateUsuarioDto, requester: any): Promise<Usuario> {
+  async update(
+    id: number,
+    dto: UpdateUsuarioDto,
+    requester: any,
+  ): Promise<Usuario> {
     const usuario = await this.findById(id);
 
     if (requester.role !== 'Admin' && requester.id !== usuario.usuIntId) {
@@ -134,7 +149,11 @@ export class UsuarioService {
       );
     }
 
-    if (dto.usuStrTipo && (dto.usuStrTipo === 'Coordenador' || dto.usuStrTipo === 'Admin') && requester.role !== 'Admin') {
+    if (
+      dto.usuStrTipo &&
+      (dto.usuStrTipo === 'Coordenador' || dto.usuStrTipo === 'Admin') &&
+      requester.role !== 'Admin'
+    ) {
       throw new HttpException(
         'Somente administradores podem atribuir papéis de nível administrativo.',
         HttpStatus.FORBIDDEN,
@@ -143,15 +162,22 @@ export class UsuarioService {
 
     if (dto.usuStrEmail && dto.usuStrEmail !== usuario.usuStrEmail) {
       if (usuario.usuStrTipo === 'Grupo' || dto.usuStrTipo === 'Grupo') {
-        const emailInstitucionalRegex = /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
+        const emailInstitucionalRegex =
+          /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
         if (!emailInstitucionalRegex.test(dto.usuStrEmail)) {
-          throw new HttpException('O novo e-mail para perfis de Grupo deve ser institucional do CPS.', HttpStatus.BAD_REQUEST);
+          throw new HttpException(
+            'O novo e-mail para perfis de Grupo deve ser institucional do CPS.',
+            HttpStatus.BAD_REQUEST,
+          );
         }
       }
 
       const emailExist = await this.findByEmail(dto.usuStrEmail);
       if (emailExist) {
-        throw new HttpException('Este email já está sendo utilizado por outro usuário', HttpStatus.CONFLICT);
+        throw new HttpException(
+          'Este email já está sendo utilizado por outro usuário',
+          HttpStatus.CONFLICT,
+        );
       }
       usuario.usuStrEmail = dto.usuStrEmail;
     }
@@ -172,7 +198,10 @@ export class UsuarioService {
     const usuario = await this.findById(id);
 
     if (usuario.usuStrTipo === 'Admin' && requester.id === usuario.usuIntId) {
-      throw new HttpException('Operação cancelada: Um administrador não pode inativar a própria conta ativa.', HttpStatus.FORBIDDEN);
+      throw new HttpException(
+        'Operação cancelada: Um administrador não pode inativar a própria conta ativa.',
+        HttpStatus.FORBIDDEN,
+      );
     }
 
     usuario.usuBoolAtivo = false;

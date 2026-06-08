@@ -175,7 +175,7 @@ export class CoordenadorController {
     @Req() req: any,
   ) {
     const atorEmail = req.user?.email ?? 'coordenador';
-    return this.coordenadorService.rejeitarDemanda(id, dto.motivo, atorEmail);
+    return this.coordenadorService.rejeitarDemanda(id, atorEmail, dto.motivo);
   }
 
   @Put('candidaturas/gerenciar')

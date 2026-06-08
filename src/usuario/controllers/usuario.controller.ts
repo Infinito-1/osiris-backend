@@ -37,15 +37,6 @@ export class UsuarioController {
     return this.usuarioService.create(dto, req?.user);
   }
 
-  @Post('admin/criar')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
-  @ApiBearerAuth()
-  @HttpCode(HttpStatus.CREATED)
-  criarComoAdmin(@Body() dto: CreateUsuarioDto, @Req() req: any): Promise<any> {
-    return this.usuarioService.create(dto, req.user);
-  }
-
   @Get('confirmar/:token')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({

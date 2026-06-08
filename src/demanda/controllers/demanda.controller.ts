@@ -106,11 +106,7 @@ export class DemandaController {
 
   @Delete(':id')
   @Roles('Admin')
-  delete(
-    @Param('id', ParseIntPipe) id: number,
-    @Req() req: any,
-  ): Promise<void> {
-    const ator = { tipo: 'Admin' as const, email: req.user?.email ?? 'admin' };
-    return this.demandaService.delete(id, ator);
+  delete(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    return this.demandaService.delete(id);
   }
 }

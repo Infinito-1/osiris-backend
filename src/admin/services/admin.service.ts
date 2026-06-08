@@ -13,6 +13,12 @@ import { UpdateDemandaDto } from '../../demanda/dto/update-demanda.dto';
 import { MailService } from '../../mail/mail.service';
 import { LogService } from '../../log/services/log.service';
 import { LogAcao } from '../../log/entities/log-acao.entity';
+import { Candidatura } from '../../candidatura/entities/candidatura.entity';
+import { CoordenadorService } from '../../coordenador/services/coordenador.service';
+import { GrupoService } from '../../grupo/services/grupo.service';
+import { EmpreendedorService } from '../../empreendedor/services/empreendedor.service';
+import { UsuarioService } from '../../usuario/services/usuario.service';
+import { CreateUsuarioDto } from '../../usuario/dto/create-usuario.dto';
 
 @Injectable()
 export class AdminService {
@@ -26,6 +32,12 @@ export class AdminService {
     @InjectRepository(Projeto)
     private readonly projetoRepository: Repository<Projeto>,
     private readonly logService: LogService,
+    @InjectRepository(Candidatura)
+    private readonly candidaturaRepository: Repository<Candidatura>,
+    private readonly coordenadorService: CoordenadorService,
+    private readonly grupoService: GrupoService,
+    private readonly empreendedorService: EmpreendedorService,
+    private readonly usuarioService: UsuarioService,
     private readonly mailService: MailService, // Injetado para cumprir RF-20 e RN-15
   ) {}
 
@@ -572,5 +584,142 @@ export class AdminService {
       usuariosPorTipo,
       timestamp: new Date().toISOString(),
     };
+  }
+
+  async excluirDemanda(id: number, atorEmail: string): Promise<void> {
+    const demanda = await this.demandaRepository.findOne({
+      where: { demIntId: id },
+      relations: ['candidatura', 'empreendedor', 'empreendedor.usuario'],
+    });
+    if (!demanda)
+      throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
+
+    const snapshot = {
+      demIntId: demanda.demIntId,
+      demStrNome: demanda.demStrNome,
+    };
+
+    const candidaturaIds = demanda.candidatura?.map((c) => c.canIntId) ?? [];
+
+    // 1. Desativar projetos vinculados às candidaturas
+    if (candidaturaIds.length) {
+      await this.projetoRepository
+        .createQueryBuilder()
+        .update()
+        .set({ candidatura: null })
+        .where('can_int_id IN (:...ids)', { ids: candidaturaIds })
+        .execute();
+
+      // 2. Excluir candidaturas
+      await this.candidaturaRepository.delete(candidaturaIds);
+    }
+
+    // 3. Excluir demanda
+    await this.demandaRepository.delete(id);
+
+    await this.registrarAuditoria(
+      'Excluir Demanda',
+      'Demanda',
+      id,
+      snapshot,
+      atorEmail,
+      demanda.empreendedor?.usuario?.usuStrEmail,
+      `A demanda "${demanda.demStrNome}" foi removida da plataforma Osiris.`,
+    );
+  }
+
+  async excluirCandidatura(id: number, atorEmail: string): Promise<void> {
+    const candidatura = await this.candidaturaRepository.findOne({
+      where: { canIntId: id },
+      relations: ['demanda', 'grupo', 'grupo.usuario'],
+    });
+    if (!candidatura)
+      throw new HttpException(
+        'Candidatura não encontrada',
+        HttpStatus.NOT_FOUND,
+      );
+
+    const snapshot = {
+      canIntId: candidatura.canIntId,
+      canStrStatus: candidatura.canStrStatus,
+      demStrNome: candidatura.demanda?.demStrNome,
+    };
+
+    // Desativar projetos vinculados a esta candidatura
+    await this.projetoRepository
+      .createQueryBuilder()
+      .update()
+      .set({ proBoolAtivo: false })
+      .where('can_int_id = :id', { id })
+      .execute();
+
+    await this.candidaturaRepository.delete(id);
+
+    await this.registrarAuditoria(
+      'Excluir Candidatura',
+      'Candidatura',
+      id,
+      snapshot,
+      atorEmail,
+      candidatura.grupo?.usuario?.usuStrEmail,
+      `Sua candidatura para "${candidatura.demanda?.demStrNome}" foi removida por um administrador.`,
+    );
+  }
+
+  async impactoCandidatura(id: number): Promise<{ totalProjetos: number }> {
+    const totalProjetos = await this.projetoRepository.count({
+      where: { candidatura: { canIntId: id } },
+    });
+    return { totalProjetos };
+  }
+
+  async criarUsuario(dto: CreateUsuarioDto, atorEmail: string): Promise<any> {
+    // 1. Cria o usuário base
+    const resultado = await this.usuarioService.create(dto, { role: 'Admin' });
+    const usuarioId = resultado.dados.id;
+    console.log('[AdminService] dto recebido:', JSON.stringify(dto));
+    // 2. Cria o perfil vinculado
+    try {
+      if (dto.usuStrTipo === 'Coordenador') {
+        console.log('[AdminService] Chamando coordenadorService.create com usuarioId:', usuarioId);
+        await this.coordenadorService.create({
+          usuIntId: usuarioId,
+          cooStrCurso: dto.cooStrCurso ?? 'Não informado',
+        });
+        console.log('[AdminService] Coordenador criado com sucesso');
+      } else if (dto.usuStrTipo === 'Empreendedor') {
+        await this.empreendedorService.create({
+          usuIntId: usuarioId,
+          empStrEmpresa: dto.empStrEmpresa ?? 'Não informado',
+          empChaCnpj: dto.empChaCnpj ?? '',
+        });
+      } else if (dto.usuStrTipo === 'Grupo') {
+        await this.grupoService.create({
+          usuIntId: usuarioId,
+          gruStrNome: dto.gruStrNome ?? 'Não informado',
+          gruStrDescricao: dto.gruStrDescricao ?? 'Não informado',
+          gruChaRa: dto.gruChaRa ?? '0000000000000',
+          gruIntTamanho: dto.gruIntTamanho ?? 1,
+          gruStrMembros: dto.gruStrMembros,
+          semIntId: dto.semIntId ?? 1,
+        });
+      }
+    } catch (err) {
+      console.error('[AdminService] Erro ao criar perfil vinculado:', err);
+      throw new HttpException(
+        `Usuário criado (ID: ${usuarioId}), mas falha ao criar perfil de ${dto.usuStrTipo}: ${(err as any)?.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    await this.registrarAuditoria(
+      'Criar Usuário',
+      'Usuario',
+      usuarioId,
+      { usuStrEmail: dto.usuStrEmail, usuStrTipo: dto.usuStrTipo },
+      atorEmail,
+    );
+
+    return resultado;
   }
 }
