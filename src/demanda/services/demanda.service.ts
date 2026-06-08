@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
@@ -18,7 +19,13 @@ export class DemandaService {
   // Usado por Admins e Coordenadores para ver TODAS as demandas no painel gerencial de triagem
   async findAll(): Promise<Demanda[]> {
     return this.demandaRepository.find({
-      relations: ['semestre', 'empreendedor', 'empreendedor.usuario', 'coordenador', 'tipo'],
+      relations: [
+        'semestre',
+        'empreendedor',
+        'empreendedor.usuario',
+        'coordenador',
+        'tipo',
+      ],
     });
   }
 
@@ -35,10 +42,19 @@ export class DemandaService {
   async findById(id: number): Promise<Demanda> {
     const demanda = await this.demandaRepository.findOne({
       where: { demIntId: id },
-      relations: ['semestre', 'empreendedor', 'empreendedor.usuario', 'coordenador', 'tipo'],
+      relations: [
+        'semestre',
+        'empreendedor',
+        'empreendedor.usuario',
+        'coordenador',
+        'tipo',
+      ],
     });
     if (!demanda) {
-      throw new HttpException('Demanda não encontrada no sistema', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Demanda não encontrada no sistema',
+        HttpStatus.NOT_FOUND,
+      );
     }
     return demanda;
   }
@@ -49,7 +65,11 @@ export class DemandaService {
 
   async findByNome(nome: string): Promise<Demanda[]> {
     return this.demandaRepository.find({
-      where: { demStrNome: ILike(`%${nome}%`), demBoolAtivo: true, demBoolAceitacao: true },
+      where: {
+        demStrNome: ILike(`%${nome}%`),
+        demBoolAtivo: true,
+        demBoolAceitacao: true,
+      },
       relations: ['semestre', 'empreendedor', 'coordenador', 'tipo'],
     });
   }
@@ -101,9 +121,11 @@ export class DemandaService {
 
     if (dto.demStrNome) demanda.demStrNome = dto.demStrNome;
     if (dto.demStrDescricao) demanda.demStrDescricao = dto.demStrDescricao;
-    if (dto.demBoolAceitaMudancaTipo !== undefined) demanda.demBoolAceitaMudancaTipo = dto.demBoolAceitaMudancaTipo;
-    
-    if (dto.demBoolExibirContato !== undefined) demanda.demBoolExibirContato = dto.demBoolExibirContato;
+    if (dto.demBoolAceitaMudancaTipo !== undefined)
+      demanda.demBoolAceitaMudancaTipo = dto.demBoolAceitaMudancaTipo;
+
+    if (dto.demBoolExibirContato !== undefined)
+      demanda.demBoolExibirContato = dto.demBoolExibirContato;
     if (dto.demBoolAceitacao !== undefined) {
       demanda.demBoolAceitacao = dto.demBoolAceitacao;
     }

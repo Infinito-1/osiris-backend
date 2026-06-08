@@ -7,6 +7,7 @@ import { HistoricoProjeto } from '../../historico_projeto/entities/historico_pro
 import { CreateProjetoDto } from '../dto/create-projeto.dto';
 import { UpdateProjetoDto } from '../dto/update-projeto.dto';
 import { Grupo } from '../../grupo/entities/grupo.entity';
+import { LogService } from '../../log/services/log.service';
 
 @Injectable()
 export class ProjetoService {
@@ -19,6 +20,7 @@ export class ProjetoService {
     private readonly historicoRepository: Repository<HistoricoProjeto>,
     @InjectRepository(Grupo)
     private readonly grupoRepository: Repository<Grupo>,
+    private readonly logService: LogService,
   ) {}
 
   private readonly relations = [
@@ -30,6 +32,29 @@ export class ProjetoService {
     'grupo',
     'grupo.usuario',
   ];
+
+  private async log(
+    acao: string,
+    entidade: string,
+    entidadeId: number,
+    snapshot: object,
+    atorEmail: string,
+    destinatarioEmail?: string,
+    mensagem?: string,
+  ) {
+    await this.logService.registrar(
+      acao,
+      `Coordenador (${atorEmail}) realizou: ${acao} em ${entidade} ID=${entidadeId}`,
+      { tipo: 'Coordenador', email: atorEmail },
+      {
+        entidade,
+        entidadeId,
+        dadosAnteriores: snapshot,
+        destinatarioEmail,
+        mensagemNotificacao: mensagem,
+      },
+    );
+  }
 
   async findAll(): Promise<Projeto[]> {
     return this.projetoRepository.find({
@@ -180,21 +205,76 @@ export class ProjetoService {
   }
 
   // coordenador desativa projeto com mensagem opcional
-  async desativarCoordenador(id: number, motivo?: string): Promise<Projeto> {
+  async desativarCoordenador(
+    id: number,
+    motivo?: string,
+    atorEmail?: string,
+  ): Promise<Projeto> {
     const projeto = await this.findById(id);
+
+    const snapshot = {
+      proIntId: projeto.proIntId,
+      proStrDescricao: projeto.proStrDescricao,
+      proBoolAtivo: projeto.proBoolAtivo,
+    };
+
     projeto.proBoolAtivo = false;
     projeto.proBoolDesativadoCoordenador = true;
     projeto.proStrMotivoDesativacao = motivo ?? null;
-    return this.projetoRepository.save(projeto);
+    const salvo = await this.projetoRepository.save(projeto);
+
+    if (atorEmail) {
+      const grupoEmail =
+        projeto.candidatura?.grupo?.usuario?.usuStrEmail ??
+        projeto.grupo?.usuario?.usuStrEmail;
+
+      await this.log(
+        'Desativar Projeto',
+        'Projeto',
+        id,
+        snapshot,
+        atorEmail,
+        grupoEmail,
+        `O projeto "${projeto.proStrDescricao}" foi desativado pelo coordenador. Motivo: ${motivo ?? 'não informado'}.`,
+      );
+    }
+
+    return salvo;
   }
 
   // coordenador reativa projeto após revisão
-  async reativarCoordenador(id: number): Promise<Projeto> {
+  async reativarCoordenador(id: number, atorEmail?: string): Promise<Projeto> {
     const projeto = await this.findById(id);
+
+    const snapshot = {
+      proIntId: projeto.proIntId,
+      proStrDescricao: projeto.proStrDescricao,
+      proBoolAtivo: projeto.proBoolAtivo,
+    };
+
     projeto.proBoolAtivo = true;
     projeto.proBoolDesativadoCoordenador = false;
     projeto.proStrMotivoDesativacao = null;
-    return this.projetoRepository.save(projeto);
+
+    const salvo = await this.projetoRepository.save(projeto);
+
+    if (atorEmail) {
+      const grupoEmail =
+        projeto.candidatura?.grupo?.usuario?.usuStrEmail ??
+        projeto.grupo?.usuario?.usuStrEmail;
+
+      await this.log(
+        'Reativar Projeto',
+        'Projeto',
+        id,
+        snapshot,
+        atorEmail,
+        grupoEmail,
+        `O projeto "${projeto.proStrDescricao}" foi reativado pelo coordenador.`,
+      );
+    }
+
+    return salvo;
   }
 
   async delete(id: number): Promise<void> {

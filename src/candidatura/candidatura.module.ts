@@ -6,14 +6,16 @@ import { Candidatura } from './entities/candidatura.entity';
 import { Grupo } from '../grupo/entities/grupo.entity';
 import { Demanda } from '../demanda/entities/demanda.entity';
 import { Coordenador } from '../coordenador/entities/coordenador.entity';
+import { Projeto } from '../projeto/entities/projeto.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      Candidatura, 
-      Grupo, 
-      Demanda, 
-      Coordenador
+      Candidatura,
+      Grupo,
+      Demanda,
+      Coordenador,
+      Projeto,
     ]),
   ],
   controllers: [CandidaturaController],

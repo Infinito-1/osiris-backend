@@ -1,6 +1,17 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
-  Body, Controller, Delete, Get, HttpCode, HttpStatus,
-  Param, ParseIntPipe, Post, Put, UseGuards, Req
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { UsuarioService } from '../services/usuario.service';
 import { Usuario } from '../entities/usuario.entity';
@@ -18,14 +29,21 @@ export class UsuarioController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiResponse({ status: 201, description: 'Cria um novo usuário e dispara e-mail de confirmação' })
+  @ApiResponse({
+    status: 201,
+    description: 'Cria um novo usuário e dispara e-mail de confirmação',
+  })
   create(@Body() dto: CreateUsuarioDto, @Req() req: any): Promise<any> {
     return this.usuarioService.create(dto, req?.user);
   }
 
   @Get('confirmar/:token')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Confirma a conta do usuário usando o token enviado por e-mail e retorna a rota do painel' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Confirma a conta do usuário usando o token enviado por e-mail e retorna a rota do painel',
+  })
   confirmarEmail(@Param('token') token: string): Promise<any> {
     return this.usuarioService.confirmarEmail(token);
   }
@@ -66,7 +84,10 @@ export class UsuarioController {
   @ApiBearerAuth()
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  delete(@Param('id', ParseIntPipe) id: number, @Req() req: any): Promise<void> {
+  delete(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: any,
+  ): Promise<void> {
     return this.usuarioService.delete(id, req.user);
   }
 }

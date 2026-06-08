@@ -92,15 +92,21 @@ export class ProjetoController {
   desativar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: { motivo?: string },
+    @Request() req,
   ): Promise<Projeto> {
-    return this.projetoService.desativarCoordenador(id, dto.motivo);
+    const atorEmail = req.user?.email ?? 'coordenador';
+    return this.projetoService.desativarCoordenador(id, dto.motivo, atorEmail);
   }
 
   // coordenador reativa após revisão
   @Put(':id/reativar')
   @Roles('Coordenador', 'Admin')
-  reativar(@Param('id', ParseIntPipe) id: number): Promise<Projeto> {
-    return this.projetoService.reativarCoordenador(id);
+  reativar(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req,
+  ): Promise<Projeto> {
+    const atorEmail = req.user?.email ?? 'coordenador';
+    return this.projetoService.reativarCoordenador(id, atorEmail);
   }
 
   @Put(':id')

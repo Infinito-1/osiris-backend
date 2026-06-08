@@ -47,9 +47,9 @@ export class Projeto {
   @JoinColumn({ name: 'gru_int_id' })
   grupo?: Grupo | null;
 
-  @OneToOne(() => Candidatura)
+  @OneToOne(() => Candidatura, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'can_int_id' })
-  candidatura!: Candidatura;
+  candidatura!: Candidatura | null;
 
   @OneToMany(() => HistoricoProjeto, (historico) => historico.projeto)
   historicos!: HistoricoProjeto[];
