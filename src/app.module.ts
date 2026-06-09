@@ -17,15 +17,21 @@ import { TipoDemandaModule } from './tipo_demanda/tipo_demanda.module';
 import { UsuarioModule } from './usuario/usuario.module';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module'; 
-import { MailModule } from './mail/mail.module'; // ✅ importa o módulo de email
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
+    // Configura o carregamento do .env de forma global na aplicação
+    ConfigModule.forRoot({ 
+      isGlobal: true,
+      envFilePath: '.env' 
+    }),
+    
     TypeOrmModule.forRootAsync({
       useClass: DevService,
       imports: [ConfigModule],
     }),
+    
     GrupoModule,
     EmpreendedorModule,
     CoordenadorModule,
@@ -38,7 +44,7 @@ import { MailModule } from './mail/mail.module'; // ✅ importa o módulo de ema
     UsuarioModule,
     AdminModule,
     AuthModule,
-    MailModule, // ✅ agora o MailController fica disponível
+    MailModule,
   ],
   controllers: [AppController],
   providers: [],

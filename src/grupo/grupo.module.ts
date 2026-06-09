@@ -17,7 +17,7 @@ import { MailModule } from '../mail/mail.module'; // 👈 Importação adicionad
       Demanda, 
       Candidatura
     ]),
-    MailModule, // 👈 Injetado para dar superpoderes de e-mail ao módulo de grupos
+    MailModule, //Injetado para dar superpoderes de e-mail ao módulo de grupos
   ],
   providers: [GrupoService],
   controllers: [GrupoController],

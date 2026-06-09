@@ -22,7 +22,7 @@ export class GrupoService {
     @InjectRepository(Candidatura)
     private readonly candidaturaRepository: Repository<Candidatura>,
     
-    private readonly mailService: MailService, // 👈 Injetado com sucesso no construtor
+    private readonly mailService: MailService,
   ) {}
 
   async findAll(): Promise<Grupo[]> {
@@ -67,7 +67,6 @@ export class GrupoService {
       throw new HttpException('Usuário de credencial base não encontrado', HttpStatus.NOT_FOUND);
     }
 
-    // Mantendo a validação robusta alinhada ao Regex que você já utiliza no UsuarioService
     const emailInstitucionalRegex = /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
     
     if (usuario.usuStrEmail && !emailInstitucionalRegex.test(usuario.usuStrEmail)) {
@@ -160,13 +159,17 @@ export class GrupoService {
 
     const candidaturaSalva = await this.candidaturaRepository.save(novaCandidatura);
 
-    // 📧 GATILHO DE E-MAIL INTEGRADO: Usa o método que você já criou no MailService!
     if (grupo.usuario && grupo.usuario.usuStrEmail) {
-      await this.mailService.sendStatusCandidaturaEmail(
-        grupo.usuario.usuStrEmail,
-        demanda.demStrNome,
-        'Pendente (Aguardando avaliação do Coordenador)',
-      );
+      try {
+        await this.mailService.sendStatusCandidaturaEmail(
+          'GRUPO',
+          grupo.usuario.usuStrEmail,
+          demanda.demStrNome,
+          'Pendente (Aguardando avaliação do Coordenador)',
+        );
+      } catch (error) {
+        console.error('Falha ao enviar e-mail de notificação para grupo:', error);
+      }
     }
 
     return candidaturaSalva;

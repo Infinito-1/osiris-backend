@@ -126,8 +126,8 @@ export class CoordenadorService {
     }
 
     demanda.demStrSemestreRecomendado = dto.semestre; 
-    demanda.demStrAreaTecnica = dto.areaTecnica;     
-    demanda.demStrTipagem = dto.tipagem;             
+    demanda.demStrAreaTecnica = dto.areaTecnica;    
+    demanda.demStrTipagem = dto.tipagem;            
 
     const apenasNumeros = dto.semestre.replace(/\D/g, '');
     const numeroSemestre = parseInt(apenasNumeros);
@@ -150,19 +150,21 @@ export class CoordenadorService {
 
     if (!demanda.demStrSemestreRecomendado || !demanda.demStrAreaTecnica) {
       throw new HttpException(
-        'Aprovação bloqueada: A demanda precisa ser previamente Classificada (Semestre Recomendado e Área Técnica preenchidos)',
+        'Aprovação bloqueada: A demanda precisa ser previamente Classificada',
         HttpStatus.BAD_REQUEST,
       );
     }
 
     demanda.demBoolAceitacao = true; 
-    demanda.demBoolAtivo = true;     
+    demanda.demBoolAtivo = true;    
 
     const demandaSalva = await this.demandaRepository.save(demanda);
 
     if (demanda.empreendedor?.usuario?.usuStrEmail) {
       try {
+        // Passando 'COORDENADOR' pois a ação vem do Coordenador
         await this.mailService.sendDemandaAprovadaEmail(
+          'COORDENADOR',
           demanda.empreendedor.usuario.usuStrEmail,
           demanda.demStrNome,
         );
@@ -196,7 +198,9 @@ export class CoordenadorService {
 
     if (candidatura.grupo?.usuario?.usuStrEmail) {
       try {
+        // Passando 'COORDENADOR' pois a ação vem do Coordenador
         await this.mailService.sendStatusCandidaturaEmail(
+          'COORDENADOR',
           candidatura.grupo.usuario.usuStrEmail,
           candidatura.demanda?.demStrNome || 'Demanda Vinculada',
           dto.status,

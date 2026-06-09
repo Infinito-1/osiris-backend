@@ -5,26 +5,27 @@ import { MailService } from './mail.service';
 export class MailController {
   constructor(private readonly mailService: MailService) {}
 
-  // ✅ TESTE DE ENVIO COM CÓDIGO
+  // TESTE DE ENVIO COM CÓDIGO
   @Get('test')
   async sendTest(@Query('to') to: string) {
     const codigo = Math.floor(100000 + Math.random() * 900000).toString();
 
-    await this.mailService.sendConfirmationEmail(to, codigo);
+    // ADICIONADO: 'ADMIN' como entidade para o teste
+    await this.mailService.sendConfirmationEmail('ADMIN', to, codigo);
 
     return {
       message: `Email de teste enviado para ${to}`,
-      codigo // 🔥 útil pra testar no Postman
+      codigo // útil pra testar no Postman
     };
   }
 
-  // Mantido
+  // ADICIONADO: 'ADMIN' como entidade para o teste
   @Get('demanda')
   async sendDemanda(
     @Query('to') to: string,
     @Query('nome') nome: string
   ) {
-    await this.mailService.sendDemandaAprovadaEmail(to, nome);
+    await this.mailService.sendDemandaAprovadaEmail('ADMIN', to, nome);
 
     return {
       message: `Email de aprovação enviado para ${to} sobre a demanda ${nome}`

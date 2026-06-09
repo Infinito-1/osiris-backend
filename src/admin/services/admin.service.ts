@@ -25,7 +25,7 @@ export class AdminService {
     private readonly demandaRepository: Repository<Demanda>,
     @InjectRepository(Projeto)
     private readonly projetoRepository: Repository<Projeto>,
-    private readonly mailService: MailService, // Injetado para cumprir RF-20 e RN-15
+    private readonly mailService: MailService,
   ) {}
 
   private async registrarAuditoria(acao: string, detalhes: string) {
@@ -39,9 +39,9 @@ export class AdminService {
     this.notificationsLogs.push(notificacao);
     console.log(`[NOTIFICAÇÃO] Para: ${emailDestino} - ${mensagem}`);
     
-    // Dispara a notificação real usando a infraestrutura do MailModule
     try {
-      await this.mailService.sendConfirmationEmail(emailDestino, `Notificação Osiris: ${mensagem}`);
+      // CORRIGIDO: Passando 'ADMIN' como primeira entidade
+      await this.mailService.sendConfirmationEmail('ADMIN', emailDestino, `Notificação Osiris: ${mensagem}`);
     } catch (error) {
       console.error(`Falha ao disparar e-mail de notificação para ${emailDestino}:`, error);
     }
@@ -97,7 +97,6 @@ export class AdminService {
     const usuario = await this.usuarioRepository.findOne({ where: { usuIntId: usuarioId } });
     if (!usuario) throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
 
-    // RN-19: Validação caso o administrador esteja transformando o usuário em um Líder de Grupo
     if (novoPapel === 'Grupo') {
       const emailInstitucionalRegex = /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
       if (!emailInstitucionalRegex.test(usuario.usuStrEmail)) {
@@ -200,6 +199,7 @@ export class AdminService {
     return usuario;
   }
 
+  // ... restante dos métodos (gerenciarDemanda, etc.) permanecem iguais ...
   async gerenciarDemanda(id: number, dados: UpdateDemandaDto): Promise<Demanda> {
     const demanda = await this.demandaRepository.findOne({ where: { demIntId: id } });
     if (!demanda) throw new HttpException('Demanda não encontrada', HttpStatus.NOT_FOUND);
@@ -228,11 +228,11 @@ export class AdminService {
   }
 
   async inativarProjeto(id: number): Promise<void> {
-    const proyecto = await this.projetoRepository.findOne({ where: { proIntId: id } });
-    if (!proyecto) throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
+    const projeto = await this.projetoRepository.findOne({ where: { proIntId: id } });
+    if (!projeto) throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
 
-    proyecto.proBoolAtivo = false;
-    await this.projetoRepository.save(proyecto);
+    projeto.proBoolAtivo = false;
+    await this.projetoRepository.save(projeto);
 
     await this.registrarAuditoria('Inativar Projeto', `Projeto ID=${id} definido como inativo`);
   }
@@ -249,14 +249,14 @@ export class AdminService {
   }
 
   async reativarProjeto(id: number): Promise<Projeto> {
-    const proyecto = await this.projetoRepository.findOne({ where: { proIntId: id } });
-    if (!proyecto) throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
+    const projeto = await this.projetoRepository.findOne({ where: { proIntId: id } });
+    if (!projeto) throw new HttpException('Projeto não encontrado', HttpStatus.NOT_FOUND);
 
-    proyecto.proBoolAtivo = true;
-    await this.projetoRepository.save(proyecto);
+    projeto.proBoolAtivo = true;
+    await this.projetoRepository.save(projeto);
 
     await this.registrarAuditoria('Reativar Projeto', `Projeto ID=${id} restaurado`);
-    return proyecto;
+    return projeto;
   }
 
   async listarAdmins(): Promise<Admin[]> {

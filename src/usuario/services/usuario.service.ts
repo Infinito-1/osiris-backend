@@ -71,8 +71,8 @@ export class UsuarioService {
 
     const salvo = await this.usuarioRepository.save(usuario);
 
-    // 📧 Envio de email NÃO bloqueante
-    this.mailService.sendConfirmationEmail(salvo.usuStrEmail, codigo)
+    // Envio de email com a entidade 'USUARIO' corrigida
+    this.mailService.sendConfirmationEmail('USUARIO', salvo.usuStrEmail, codigo)
       .catch(err => this.logger.error(`Falha no envio de email para ${salvo.usuStrEmail}: ${err.message}`));
 
     return {
@@ -82,7 +82,6 @@ export class UsuarioService {
     };
   }
 
-  // AJUSTADO: Agora busca pelo código diretamente
   async confirmarCodigo(email: string, codigo: string): Promise<any> {
     const usuario = await this.usuarioRepository.findOne({
       where: { codigo_ativacao: codigo },
@@ -94,8 +93,7 @@ export class UsuarioService {
 
     usuario.usuBoolConfirmado = true;
     usuario.usuBoolAtivo = true;
-    // O uso de undefined resolve o erro de tipagem que você tinha (ts 2322)
-    usuario.codigo_ativacao = undefined; 
+    usuario.codigo_ativacao = undefined as any; // Cast necessário para evitar erro de tipo no TS
 
     await this.usuarioRepository.save(usuario);
 

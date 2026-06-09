@@ -7,6 +7,7 @@ import { Demanda } from '../../demanda/entities/demanda.entity';
 import { Candidatura } from '../../candidatura/entities/candidatura.entity';
 import { CreateEmpreendedorDto } from '../dto/create-empreendedor.dto';
 import { UpdateEmpreendedorDto } from '../dto/update-empreendedor.dto';
+import { MailService } from '../../mail/mail.service'; // Importação adicionada
 
 @Injectable()
 export class EmpreendedorService {
@@ -19,6 +20,7 @@ export class EmpreendedorService {
     private readonly demandaRepository: Repository<Demanda>,
     @InjectRepository(Candidatura)
     private readonly candidaturaRepository: Repository<Candidatura>,
+    private readonly mailService: MailService, // Injeção do MailService
   ) {}
 
   async findAll(): Promise<Empreendedor[]> {
@@ -53,7 +55,6 @@ export class EmpreendedorService {
       throw new HttpException('Usuário de credencial base não encontrado', HttpStatus.NOT_FOUND);
     }
 
-    // Alinha a Role do usuário com o perfil criado no ecossistema
     usuario.usuStrTipo = 'Empreendedor';
     await this.usuarioRepository.save(usuario);
 
@@ -117,8 +118,8 @@ export class EmpreendedorService {
       throw new HttpException('Demanda inexistente ou não associada à sua conta', HttpStatus.NOT_FOUND);
     }
 
-    demanda.demBoolAtivo = true;     
-    demanda.demBoolAceitacao = false; // Ao reativar, volta obrigatoriamente para a esteira de triagem
+    demanda.demBoolAtivo = true;    
+    demanda.demBoolAceitacao = false; 
 
     return this.demandaRepository.save(demanda);
   }
@@ -134,7 +135,6 @@ export class EmpreendedorService {
       where: { empreendedor: { empIntId: empreendedor.empIntId }, demBoolAceitacao: true, demBoolAtivo: true }
     });
 
-    // Ajustado para garantir que rascunhos desativados não sumam como pendências fantasmas
     const analisePendente = await this.demandaRepository.count({
       where: { empreendedor: { empIntId: empreendedor.empIntId }, demBoolAceitacao: false, demBoolAtivo: true }
     });
