@@ -45,7 +45,7 @@ describe('UsuarioService', () => {
   describe('create', () => {
     const createDto: CreateUsuarioDto = {
       usuStrNome: 'Maria Silva',
-      usuStrEmail: 'maria.silva@fatec.sp.gov.br',
+      usuStrEmail: 'maria.silva@aluno.cps.sp.gov.br',
       usuStrSenha: 'password123',
       usuStrTipo: 'Grupo',
       usuStrTelefone: '11999999999'
@@ -70,7 +70,51 @@ describe('UsuarioService', () => {
       const resultado = await service.create(createDto);
 
       expect(resultado.statusCode).toBe(HttpStatus.CREATED);
-      expect(mailService.sendConfirmationEmail).toHaveBeenCalledWith(createDto.usuStrEmail, expect.any(String));
+      expect(repository.findOne).toHaveBeenCalledWith({ where: { usuStrEmail: createDto.usuStrEmail } });
+      expect(mailService.sendConfirmationEmail).toHaveBeenCalledWith(createDto.usuStrEmail, 'mocked-token-123');
+    });
+
+    it('deve lançar erro 409 (CONFLICT) se o e-mail já estiver cadastrado no banco do Osiris', async () => {
+      mockUsuarioRepository.findOne.mockResolvedValue({ usuIntId: 1, ...createDto });
+
+      await expect(service.create(createDto)).rejects.toThrow(
+        new HttpException('Email já cadastrado', HttpStatus.CONFLICT),
+      );
+      expect(repository.save).not.toHaveBeenCalled();
+    });
+
+    it('deve lançar erro 400 (BAD_REQUEST) se um usuário do tipo Grupo tentar se cadastrar com e-mail não institucional', async () => {
+      const dtoInvalido: CreateUsuarioDto = {
+        ...createDto,
+        usuStrEmail: 'maria.silva@gmail.com',
+        usuStrTipo: 'Grupo',
+      };
+
+      mockUsuarioRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.create(dtoInvalido)).rejects.toThrow(
+        new HttpException(
+          'Líderes de grupo devem utilizar um e-mail institucional válido do CPS (ex: @aluno.cps.sp.gov.br).',
+          HttpStatus.BAD_REQUEST,
+        ),
+      );
+    });
+
+    it('deve lançar erro 403 (FORBIDDEN) se um usuário comum (não Admin) tentar criar um perfil de Coordenador', async () => {
+      const dtoCoordenador: CreateUsuarioDto = {
+        ...createDto,
+        usuStrTipo: 'Coordenador',
+      };
+
+      mockUsuarioRepository.findOne.mockResolvedValue(null);
+      const requester = { id: 2, role: 'Aluno' }; // Não é administrador
+
+      await expect(service.create(dtoCoordenador, requester)).rejects.toThrow(
+        new HttpException(
+          'Apenas administradores do sistema podem criar contas do tipo Coordenador.',
+          HttpStatus.FORBIDDEN,
+        ),
+      );
     });
   });
 

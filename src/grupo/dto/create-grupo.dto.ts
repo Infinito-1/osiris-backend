@@ -12,11 +12,6 @@ export class CreateGrupoDto {
   @IsString()
   gruStrDescricao: string;
 
-  @ApiProperty({ example: 'Maria Soares', description: 'Nome completo do líder' })
-  @IsNotEmpty()
-  @IsString()
-  gruStrLider: string;
-
   @ApiProperty({ example: '1234567890123', description: 'Código RA do líder do grupo' })
   @IsNotEmpty()
   @IsString()
@@ -36,4 +31,9 @@ export class CreateGrupoDto {
   @IsNotEmpty()
   @IsNumber()
   usuIntId: number;
+
+  @ApiProperty({ example: 3, description: 'ID do semestre do grupo' })
+  @IsNotEmpty()
+  @IsNumber()
+  semIntId: number;
 }

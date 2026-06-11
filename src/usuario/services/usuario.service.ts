@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -25,7 +26,6 @@ export class UsuarioService {
     const usuario = await this.usuarioRepository.findOne({
       where: { usuIntId: id },
     });
-
     if (!usuario) {
       throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
     }
@@ -47,26 +47,38 @@ export class UsuarioService {
     }
 
     if (dto.usuStrTipo === 'Grupo') {
-      const regex = /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
-      if (!regex.test(dto.usuStrEmail)) {
-        throw new HttpException('Grupo deve usar email institucional CPS', HttpStatus.BAD_REQUEST);
+      const emailInstitucionalRegex =
+        /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
+      if (!emailInstitucionalRegex.test(dto.usuStrEmail)) {
+        throw new HttpException(
+          'Líderes de grupo devem utilizar um e-mail institucional válido do CPS (ex: @aluno.cps.sp.gov.br).',
+          HttpStatus.BAD_REQUEST,
+        );
       }
     }
 
-    if (dto.usuStrTipo === 'Coordenador' && requester?.role !== 'Admin') {
-      throw new HttpException('Apenas admin pode criar coordenador', HttpStatus.FORBIDDEN);
+    // Regra: Apenas Admin cria Coordenador
+    if (dto.usuStrTipo === 'Coordenador') {
+      if (!requester || requester.role !== 'Admin') {
+        throw new HttpException(
+          'Apenas administradores podem criar contas do tipo Coordenador.',
+          HttpStatus.FORBIDDEN,
+        );
+      }
     }
 
     const salt = await bcrypt.genSalt(10);
     const senhaHash = await bcrypt.hash(dto.usuStrSenha, salt);
     const codigo = Math.floor(100000 + Math.random() * 900000).toString();
 
-    const usuario = this.usuarioRepository.create({
+    const criadoPorAdmin = requester?.role === 'Admin';
+
+    const novoUsuario = this.usuarioRepository.create({
       ...dto,
-      usuStrSenha: senhaHash,
-      usuBoolAtivo: false,
-      usuBoolConfirmado: false,
-      codigo_ativacao: codigo,
+      usuStrSenha: hashedPassword,
+      usuBoolAtivo: criadoPorAdmin ? true : false, // Fica inativo até confirmar por e-mail se não for criado por admin
+      usuBoolConfirmado: criadoPorAdmin ? true : false,
+      codigo_ativacao: criadoPorAdmin ? null : codigo,
     });
 
     const salvo = await this.usuarioRepository.save(usuario);
@@ -97,24 +109,88 @@ export class UsuarioService {
 
     await this.usuarioRepository.save(usuario);
 
+    let rotaRedirecionamento = '/grupos/dashboard';
+    if (usuario.usuStrTipo === 'Empreendedor')
+      rotaRedirecionamento = '/empreendedores/dashboard';
+    if (usuario.usuStrTipo === 'Coordenador')
+      rotaRedirecionamento = '/coordenadores/dashboard';
+    if (usuario.usuStrTipo === 'Admin')
+      rotaRedirecionamento = '/admin/dashboard';
+
     return {
       statusCode: HttpStatus.OK,
       message: 'Conta confirmada com sucesso!',
     };
   }
 
-  async update(id: number, dto: UpdateUsuarioDto, requester: any): Promise<Usuario> {
+  async update(
+    id: number,
+    dto: UpdateUsuarioDto,
+    requester: any,
+  ): Promise<Usuario> {
     const usuario = await this.findById(id);
     if (requester.role !== 'Admin' && requester.id !== usuario.usuIntId) {
-      throw new HttpException('Sem permissão', HttpStatus.FORBIDDEN);
+      throw new HttpException(
+        'Acesso negado: Você não possui permissão para alterar o perfil de outro usuário.',
+        HttpStatus.FORBIDDEN,
+      );
     }
-    
-    Object.assign(usuario, dto);
+
+    if (
+      dto.usuStrTipo &&
+      (dto.usuStrTipo === 'Coordenador' || dto.usuStrTipo === 'Admin') &&
+      requester.role !== 'Admin'
+    ) {
+      throw new HttpException(
+        'Somente administradores podem atribuir papéis de nível administrativo.',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    if (dto.usuStrEmail && dto.usuStrEmail !== usuario.usuStrEmail) {
+      if (usuario.usuStrTipo === 'Grupo' || dto.usuStrTipo === 'Grupo') {
+        const emailInstitucionalRegex =
+          /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
+        if (!emailInstitucionalRegex.test(dto.usuStrEmail)) {
+          throw new HttpException(
+            'O novo e-mail para perfis de Grupo deve ser institucional do CPS.',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+      }
+
+      const emailExist = await this.findByEmail(dto.usuStrEmail);
+      if (emailExist) {
+        throw new HttpException(
+          'Este email já está sendo utilizado por outro usuário',
+          HttpStatus.CONFLICT,
+        );
+      }
+      usuario.usuStrEmail = dto.usuStrEmail;
+    }
+
+    if (dto.usuStrSenha) {
+      const salt = await bcrypt.genSalt(10);
+      usuario.usuStrSenha = await bcrypt.hash(dto.usuStrSenha, salt);
+    }
+
+    if (dto.usuStrNome) usuario.usuStrNome = dto.usuStrNome;
+    if (dto.usuStrTelefone) usuario.usuStrTelefone = dto.usuStrTelefone;
+    if (dto.usuStrTipo) usuario.usuStrTipo = dto.usuStrTipo;
+
     return this.usuarioRepository.save(usuario);
   }
 
   async delete(id: number, requester: any): Promise<void> {
     const usuario = await this.findById(id);
+
+    if (usuario.usuStrTipo === 'Admin' && requester.id === usuario.usuIntId) {
+      throw new HttpException(
+        'Operação cancelada: Um administrador não pode inativar a própria conta ativa.',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
     usuario.usuBoolAtivo = false;
     await this.usuarioRepository.save(usuario);
   }

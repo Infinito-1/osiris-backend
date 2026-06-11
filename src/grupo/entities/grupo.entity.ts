@@ -17,7 +17,7 @@ export class Grupo {
   @PrimaryGeneratedColumn({ name: 'gru_int_id' })
   gruIntId!: number;
 
-  @OneToOne(() => Usuario, { eager: true })
+  @ManyToOne(() => Usuario, { eager: true })
   @JoinColumn({ name: 'usu_int_id' })
   usuario!: Usuario;
 
@@ -30,7 +30,7 @@ export class Grupo {
   gruStrDescricao!: string;
 
   @IsNotEmpty()
-  @Column({ name: 'gru_int_lider', length: 70, nullable: false })
+  @Column({ name: 'gru_str_lider', length: 70, nullable: false })
   gruStrLider!: string; // 🛠️ Corrigido o tipo para string refletindo o nome do líder
 
   @IsNotEmpty()

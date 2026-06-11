@@ -87,7 +87,7 @@ describe('AdminService', () => {
 
   describe('atualizarPapel', () => {
     it('deve alterar o papel para Grupo se o e-mail for institucional CPS (RN-19)', async () => {
-      const mockUsuario = { usuIntId: 2, usuStrEmail: 'aluno@fatec.sp.gov.br', usuStrTipo: 'Empreendedor' } as Usuario;
+      const mockUsuario = { usuIntId: 2, usuStrEmail: 'aluno@aluno.cps.sp.gov.br', usuStrTipo: 'Empreendedor' } as Usuario;
       jest.spyOn(usuarioRepository, 'findOne').mockResolvedValue(mockUsuario);
       jest.spyOn(usuarioRepository, 'save').mockResolvedValue({ ...mockUsuario, usuStrTipo: 'Grupo' } as Usuario);
 
@@ -135,7 +135,7 @@ describe('AdminService', () => {
 
   describe('reativarAdmin', () => {
     it('deve reativar um administrador com sucesso', async () => {
-      const mockUsuario = { usuIntId: 12, usuStrEmail: 'reativado@cps.sp.gov.br', usuStrTipo: 'Admin' } as Usuario;
+      const mockUsuario = { usuIntId: 12, usuStrEmail: 'reativado@aluno.cps.sp.gov.br', usuStrTipo: 'Admin' } as Usuario;
       const mockAdmin = { admIntId: 3, usuario: mockUsuario, admBoolAtivo: false } as Admin;
 
       jest.spyOn(adminRepository, 'findOne').mockResolvedValue(mockAdmin);

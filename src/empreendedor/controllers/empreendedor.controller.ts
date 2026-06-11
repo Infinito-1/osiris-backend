@@ -21,19 +21,14 @@ export class EmpreendedorController {
   constructor(private readonly mapEmpreendedorService: EmpreendedorService) {}
 
   @Get()
-  @Roles('Coordenador', 'Admin')
+  @Roles('Empreendedor', 'Admin')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Listar todos os empreendedores parceiros (Gerencial)' })
   findAll(): Promise<Empreendedor[]> {
     return this.mapEmpreendedorService.findAll();
   }
 
-  @Get(':id')
-  @Roles('Coordenador', 'Admin')
-  @HttpCode(HttpStatus.OK)
-  findById(@Param('id', ParseIntPipe) id: number): Promise<Empreendedor> {
-    return this.mapEmpreendedorService.findById(id);
-  }
+
 
   @Public() //Rota aberta para permitir o auto-cadastro de novas empresas no Osiris
   @Post()
@@ -59,16 +54,6 @@ export class EmpreendedorController {
     return this.mapEmpreendedorService.findByUsuarioId(usuarioId);
   }
 
-  @Put(':id')
-  @Roles('Empreendedor', 'Admin')
-  @HttpCode(HttpStatus.OK)
-  update(
-    @Param('id', ParseIntPipe) id: number, 
-    @Body() dto: UpdateEmpreendedorDto
-  ): Promise<Empreendedor> {
-    return this.mapEmpreendedorService.update(id, dto);
-  }
-
   @Put('demandas/:demIntId/reativar')
   @Roles('Empreendedor', 'Admin')
   @HttpCode(HttpStatus.OK)
@@ -86,6 +71,23 @@ export class EmpreendedorController {
   @HttpCode(HttpStatus.OK)
   suspender(@Param('id', ParseIntPipe) id: number): Promise<Empreendedor> {
     return this.mapEmpreendedorService.suspender(id);
+  }
+
+  @Get(':id')
+  @Roles('Empreendedor', 'Admin')
+  @HttpCode(HttpStatus.OK)
+  findById(@Param('id', ParseIntPipe) id: number): Promise<Empreendedor> {
+    return this.mapEmpreendedorService.findById(id);
+  }
+
+  @Put(':id')
+  @Roles('Empreendedor', 'Admin')
+  @HttpCode(HttpStatus.OK)
+  update(
+    @Param('id', ParseIntPipe) id: number, 
+    @Body() dto: UpdateEmpreendedorDto
+  ): Promise<Empreendedor> {
+    return this.mapEmpreendedorService.update(id, dto);
   }
 
   @Delete(':id')

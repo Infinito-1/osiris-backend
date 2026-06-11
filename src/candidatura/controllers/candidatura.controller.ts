@@ -27,14 +27,6 @@ export class CandidaturaController {
     return this.candidaturaService.findAll();
   }
 
-  @Get(':id')
-  @Roles('Coordenador', 'Empreendedor', 'Grupo', 'Admin')
-  @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Busca os detalhes de uma candidatura pelo ID (Garante RN-10)' })
-  findById(@Param('id', ParseIntPipe) id: number, @Req() req: any): Promise<Candidatura> {
-    return this.candidaturaService.findById(id, req.user);
-  }
-
   @Get('status/:status')
   @Roles('Coordenador', 'Admin')
   @HttpCode(HttpStatus.OK)
@@ -44,6 +36,16 @@ export class CandidaturaController {
   ): Promise<Candidatura[]> {
     return this.candidaturaService.findByStatus(status);
   }
+
+  @Get(':id')
+  @Roles('Coordenador', 'Empreendedor', 'Grupo', 'Admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, description: 'Busca os detalhes de uma candidatura pelo ID (Garante RN-10)' })
+  findById(@Param('id', ParseIntPipe) id: number, @Req() req: any): Promise<Candidatura> {
+    return this.candidaturaService.findById(id, req.user);
+  }
+
+
 
   @Post()
   @Roles('Grupo', 'Admin')
