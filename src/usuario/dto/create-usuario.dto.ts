@@ -4,6 +4,7 @@ import {
   MinLength,
   IsOptional,
   IsNumber,
+  IsIn,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -45,6 +46,7 @@ export class CreateUsuarioDto {
     enum: ['Empreendedor', 'Coordenador', 'Grupo'],
   })
   @IsString()
+  @IsIn(['Empreendedor', 'Coordenador', 'Grupo']) 
   usuStrTipo!: 'Empreendedor' | 'Coordenador' | 'Grupo';
 
   // Coordenador

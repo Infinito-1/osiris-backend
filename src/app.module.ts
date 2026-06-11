@@ -17,14 +17,21 @@ import { TipoDemandaModule } from './tipo_demanda/tipo_demanda.module';
 import { UsuarioModule } from './usuario/usuario.module';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module'; 
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
+    // Configura o carregamento do .env de forma global na aplicação
+    ConfigModule.forRoot({ 
+      isGlobal: true,
+      envFilePath: '.env' 
+    }),
+    
     TypeOrmModule.forRootAsync({
       useClass: DevService,
       imports: [ConfigModule],
     }),
+    
     GrupoModule,
     EmpreendedorModule,
     CoordenadorModule,
@@ -36,7 +43,8 @@ import { AuthModule } from './auth/auth.module';
     TipoDemandaModule,
     UsuarioModule,
     AdminModule,
-    AuthModule, // 🔑 JWT disponível em toda a aplicação
+    AuthModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [],

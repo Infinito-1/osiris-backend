@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
 import { Usuario } from '../entities/usuario.entity';
 import { CreateUsuarioDto } from '../dto/create-usuario.dto';
 import { UpdateUsuarioDto } from '../dto/update-usuario.dto';
@@ -11,6 +10,8 @@ import { MailService } from '../../mail/mail.service';
 
 @Injectable()
 export class UsuarioService {
+  private readonly logger = new Logger(UsuarioService.name);
+
   constructor(
     @InjectRepository(Usuario)
     private readonly usuarioRepository: Repository<Usuario>,
@@ -28,20 +29,23 @@ export class UsuarioService {
     if (!usuario) {
       throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
     }
+
     return usuario;
   }
 
   async findByEmail(email: string): Promise<Usuario | null> {
-    return this.usuarioRepository.findOne({ where: { usuStrEmail: email } });
+    return this.usuarioRepository.findOne({
+      where: { usuStrEmail: email },
+    });
   }
 
   async create(dto: CreateUsuarioDto, requester?: any): Promise<any> {
     const existing = await this.findByEmail(dto.usuStrEmail);
+
     if (existing) {
       throw new HttpException('Email já cadastrado', HttpStatus.CONFLICT);
     }
 
-    // Regra: Líderes de grupo precisam de e-mail institucional CPS
     if (dto.usuStrTipo === 'Grupo') {
       const emailInstitucionalRegex =
         /^[a-zA-Z0-9._%+-]+@([a-z0-9-]+\.)?(cps\.sp\.gov\.br|fatec\.sp\.gov\.br)$/i;
@@ -64,8 +68,8 @@ export class UsuarioService {
     }
 
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(dto.usuStrSenha, salt);
-    const tokenConfirmacao = crypto.randomBytes(32).toString('hex');
+    const senhaHash = await bcrypt.hash(dto.usuStrSenha, salt);
+    const codigo = Math.floor(100000 + Math.random() * 900000).toString();
 
     const criadoPorAdmin = requester?.role === 'Admin';
 
@@ -74,49 +78,34 @@ export class UsuarioService {
       usuStrSenha: hashedPassword,
       usuBoolAtivo: criadoPorAdmin ? true : false, // Fica inativo até confirmar por e-mail se não for criado por admin
       usuBoolConfirmado: criadoPorAdmin ? true : false,
-      usuStrTokenConfirmacao: criadoPorAdmin ? null : tokenConfirmacao,
+      codigo_ativacao: criadoPorAdmin ? null : codigo,
     });
 
-    const usuarioSalvo = await this.usuarioRepository.save(novoUsuario);
+    const salvo = await this.usuarioRepository.save(usuario);
 
-    // Dispara o e-mail assincronamente
-    this.mailService
-      .sendConfirmationEmail(usuarioSalvo.usuStrEmail, tokenConfirmacao)
-      .catch((err) => {
-        console.error(
-          'ERRO NO ENVIO DE EMAIL (ignorado para não derrubar o cadastro):',
-          err,
-        );
-      });
+    // Envio de email com a entidade 'USUARIO' corrigida
+    this.mailService.sendConfirmationEmail('USUARIO', salvo.usuStrEmail, codigo)
+      .catch(err => this.logger.error(`Falha no envio de email para ${salvo.usuStrEmail}: ${err.message}`));
 
     return {
       statusCode: HttpStatus.CREATED,
-      message:
-        'Usuário cadastrado com sucesso no Osiris! Por favor, verifique seu e-mail para confirmar a conta.',
-      dados: {
-        id: usuarioSalvo.usuIntId,
-        nome: usuarioSalvo.usuStrNome,
-        email: usuarioSalvo.usuStrEmail,
-        tipo: usuarioSalvo.usuStrTipo,
-      },
+      message: 'Usuário criado. Verifique seu email.',
+      dados: { id: salvo.usuIntId, email: salvo.usuStrEmail },
     };
   }
 
-  async confirmarEmail(token: string): Promise<any> {
+  async confirmarCodigo(email: string, codigo: string): Promise<any> {
     const usuario = await this.usuarioRepository.findOne({
-      where: { usuStrTokenConfirmacao: token },
+      where: { codigo_ativacao: codigo },
     });
 
     if (!usuario) {
-      throw new HttpException(
-        'Token de confirmação inválido ou expirado.',
-        HttpStatus.BAD_REQUEST,
-      );
+      throw new HttpException('Código de ativação inválido ou usuário não encontrado', HttpStatus.NOT_FOUND);
     }
 
     usuario.usuBoolConfirmado = true;
     usuario.usuBoolAtivo = true;
-    usuario.usuStrTokenConfirmacao = null; // Limpa o token utilizado
+    usuario.codigo_ativacao = undefined as any; // Cast necessário para evitar erro de tipo no TS
 
     await this.usuarioRepository.save(usuario);
 
@@ -130,8 +119,7 @@ export class UsuarioService {
 
     return {
       statusCode: HttpStatus.OK,
-      message: 'Conta ativada e confirmada com sucesso no Osiris!',
-      redirectTo: rotaRedirecionamento,
+      message: 'Conta confirmada com sucesso!',
     };
   }
 
@@ -141,7 +129,6 @@ export class UsuarioService {
     requester: any,
   ): Promise<Usuario> {
     const usuario = await this.findById(id);
-
     if (requester.role !== 'Admin' && requester.id !== usuario.usuIntId) {
       throw new HttpException(
         'Acesso negado: Você não possui permissão para alterar o perfil de outro usuário.',

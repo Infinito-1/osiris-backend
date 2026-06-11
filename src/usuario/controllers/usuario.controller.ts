@@ -37,15 +37,22 @@ export class UsuarioController {
     return this.usuarioService.create(dto, req?.user);
   }
 
+  // Corrigido para chamar o confirmarCodigo conforme definido no seu Service
   @Get('confirmar/:token')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({
     status: 200,
-    description:
-      'Confirma a conta do usuário usando o token enviado por e-mail e retorna a rota do painel',
-  })
-  confirmarEmail(@Param('token') token: string): Promise<any> {
-    return this.usuarioService.confirmarEmail(token);
+//     description:
+//       'Confirma a conta do usuário usando o token enviado por e-mail e retorna a rota do painel',
+//   })
+//   confirmarEmail(@Param('token') token: string): Promise<any> {
+//     return this.usuarioService.confirmarEmail(token);
+        description: 'Confirma a conta do usuário usando o token/código enviado' })
+  confirmarCodigo(@Param('token') token: string): Promise<any> {
+    // IMPORTANTE: Certifique-se de que o parâmetro passado no DTO/Controller 
+    // está sendo tratado como o código de ativação esperado pelo seu serviço
+    return this.usuarioService.confirmarCodigo('', token); 
+    
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

@@ -72,28 +72,18 @@ export class AdminService {
     // }
   }
 
-  // private async notificarAlteracao(emailDestino: string, mensagem: string) {
-  //   const notificacao = {
-  //     emailDestino,
-  //     mensagem,
-  //     data: new Date().toISOString(),
-  //   };
-  //   this.notificationsLogs.push(notificacao);
-  //   console.log(`[NOTIFICAÇÃO] Para: ${emailDestino} - ${mensagem}`);
-
-  //   // Dispara a notificação real usando a infraestrutura do MailModule
-  //   try {
-  //     await this.mailService.sendConfirmationEmail(
-  //       emailDestino,
-  //       `Notificação Osiris: ${mensagem}`,
-  //     );
-  //   } catch (error) {
-  //     console.error(
-  //       `Falha ao disparar e-mail de notificação para ${emailDestino}:`,
-  //       error,
-  //     );
-  //   }
-  // }
+  private async notificarAlteracao(emailDestino: string, mensagem: string) {
+    const notificacao = { emailDestino, mensagem, data: new Date().toISOString() };
+    this.notificationsLogs.push(notificacao);
+    console.log(`[NOTIFICAÇÃO] Para: ${emailDestino} - ${mensagem}`);
+    
+    try {
+      // CORRIGIDO: Passando 'ADMIN' como primeira entidade
+      await this.mailService.sendConfirmationEmail('ADMIN', emailDestino, `Notificação Osiris: ${mensagem}`);
+    } catch (error) {
+      console.error(`Falha ao disparar e-mail de notificação para ${emailDestino}:`, error);
+    }
+  }
 
   async criarAdmin(dto: CreateAdminDto): Promise<Admin> {
     const { usuarioId } = dto;

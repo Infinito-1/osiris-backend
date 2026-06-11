@@ -203,7 +203,7 @@ export class CoordenadorService {
 
     if (!demanda.demStrSemestreRecomendado || !demanda.demStrAreaTecnica) {
       throw new HttpException(
-        'Aprovação bloqueada: A demanda precisa ser previamente Classificada (Semestre Recomendado e Área Técnica preenchidos)',
+        'Aprovação bloqueada: A demanda precisa ser previamente Classificada',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -225,7 +225,9 @@ export class CoordenadorService {
 
     if (demanda.empreendedor?.usuario?.usuStrEmail) {
       try {
+        // Passando 'COORDENADOR' pois a ação vem do Coordenador
         await this.mailService.sendDemandaAprovadaEmail(
+          'COORDENADOR',
           demanda.empreendedor.usuario.usuStrEmail,
           demanda.demStrNome,
         );
@@ -322,7 +324,9 @@ export class CoordenadorService {
 
     if (candidatura.grupo?.usuario?.usuStrEmail) {
       try {
+        // Passando 'COORDENADOR' pois a ação vem do Coordenador
         await this.mailService.sendStatusCandidaturaEmail(
+          'COORDENADOR',
           candidatura.grupo.usuario.usuStrEmail,
           candidatura.demanda?.demStrNome || 'Demanda Vinculada',
           dto.status,
