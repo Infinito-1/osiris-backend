@@ -46,8 +46,8 @@ export class CreateUsuarioDto {
     enum: ['Empreendedor', 'Coordenador', 'Grupo'],
   })
   @IsString()
-  @IsIn(['Empreendedor', 'Coordenador', 'Grupo']) 
-  usuStrTipo!: 'Empreendedor' | 'Coordenador' | 'Grupo';
+  @IsIn(['Empreendedor', 'Coordenador', 'Grupo', 'Admin'])
+  usuStrTipo!: 'Empreendedor' | 'Coordenador' | 'Grupo' | 'Admin';
 
   // Coordenador
   @IsOptional()

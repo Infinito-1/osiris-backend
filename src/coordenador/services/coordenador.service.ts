@@ -276,6 +276,7 @@ export class CoordenadorService {
       try {
         // reutiliza o mail de aprovação — idealmente criar sendDemandaRejeitadaEmail no MailService
         await this.mailService.sendDemandaAprovadaEmail(
+          'COORDENADOR',
           demanda.empreendedor.usuario.usuStrEmail,
           demanda.demStrNome,
         );

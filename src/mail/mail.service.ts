@@ -17,7 +17,7 @@ export class MailService {
       host: isGrupo ? 'smtp.office365.com' : 'smtp.gmail.com',
       port: isGrupo ? 587 : 465,
       ssl: !isGrupo, // Outlook (false), Gmail (true)
-      tls: isGrupo,  // Outlook (true), Gmail (false)
+      tls: isGrupo, // Outlook (true), Gmail (false)
     });
   }
 

@@ -43,7 +43,10 @@ export class UsuarioService {
     const existing = await this.findByEmail(dto.usuStrEmail);
 
     if (existing) {
-      throw new HttpException('Email já cadastrado', HttpStatus.CONFLICT);
+      if (existing.usuBoolConfirmado) {
+        throw new HttpException('Email já cadastrado', HttpStatus.CONFLICT);
+      }
+      await this.usuarioRepository.delete(existing.usuIntId);
     }
 
     if (dto.usuStrTipo === 'Grupo') {
@@ -73,19 +76,38 @@ export class UsuarioService {
 
     const criadoPorAdmin = requester?.role === 'Admin';
 
-    const novoUsuario = this.usuarioRepository.create({
-      ...dto,
-      usuStrSenha: hashedPassword,
-      usuBoolAtivo: criadoPorAdmin ? true : false, // Fica inativo até confirmar por e-mail se não for criado por admin
-      usuBoolConfirmado: criadoPorAdmin ? true : false,
-      codigo_ativacao: criadoPorAdmin ? null : codigo,
-    });
+    // const novoUsuario = this.usuarioRepository.create({
+    //   ...dto,
+    //   usuStrSenha: senhaHash,
+    //   usuBoolAtivo: criadoPorAdmin ? true : false, // Fica inativo até confirmar por e-mail se não for criado por admin
+    //   usuBoolConfirmado: criadoPorAdmin ? true : false,
+    //   codigo_ativacao: criadoPorAdmin ? null : codigo,
+    // });
 
-    const salvo = await this.usuarioRepository.save(usuario);
+    // const salvo = await this.usuarioRepository.save(novoUsuario);
+
+    const novoUsuario = this.usuarioRepository.create({
+      usuStrNome: dto.usuStrNome,
+      usuStrEmail: dto.usuStrEmail,
+      usuStrSenha: senhaHash,
+      usuStrTipo: dto.usuStrTipo,
+      usuStrTelefone: dto.usuStrTelefone,
+      usuBoolAtivo: criadoPorAdmin,
+      usuBoolConfirmado: criadoPorAdmin,
+      codigo_ativacao: criadoPorAdmin ? undefined : codigo, // null → undefined
+    });
+    const salvo = (await this.usuarioRepository.save(novoUsuario)) as Usuario; // as Usuario
 
     // Envio de email com a entidade 'USUARIO' corrigida
-    this.mailService.sendConfirmationEmail('USUARIO', salvo.usuStrEmail, codigo)
-      .catch(err => this.logger.error(`Falha no envio de email para ${salvo.usuStrEmail}: ${err.message}`));
+    if (!criadoPorAdmin) {
+      this.mailService
+        .sendConfirmationEmail('USUARIO', salvo.usuStrEmail, codigo)
+        .catch((err) =>
+          this.logger.error(
+            `Falha no envio de email para ${salvo.usuStrEmail}: ${err.message}`,
+          ),
+        );
+    }
 
     return {
       statusCode: HttpStatus.CREATED,
@@ -100,7 +122,10 @@ export class UsuarioService {
     });
 
     if (!usuario) {
-      throw new HttpException('Código de ativação inválido ou usuário não encontrado', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Código de ativação inválido ou usuário não encontrado',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     usuario.usuBoolConfirmado = true;
@@ -136,15 +161,13 @@ export class UsuarioService {
       );
     }
 
-    if (
-      dto.usuStrTipo &&
-      (dto.usuStrTipo === 'Coordenador' || dto.usuStrTipo === 'Admin') &&
-      requester.role !== 'Admin'
-    ) {
-      throw new HttpException(
-        'Somente administradores podem atribuir papéis de nível administrativo.',
-        HttpStatus.FORBIDDEN,
-      );
+    if (dto.usuStrTipo === 'Coordenador' || dto.usuStrTipo === 'Admin') {
+      if (!requester || requester.role !== 'Admin') {
+        throw new HttpException(
+          'Apenas administradores podem criar contas do tipo Coordenador ou Administrador.',
+          HttpStatus.FORBIDDEN,
+        );
+      }
     }
 
     if (dto.usuStrEmail && dto.usuStrEmail !== usuario.usuStrEmail) {
