@@ -203,13 +203,17 @@ export class GrupoService {
     const candidaturaSalva =
       await this.candidaturaRepository.save(novaCandidatura);
 
-    // 📧 GATILHO DE E-MAIL INTEGRADO: Usa o método que você já criou no MailService!
     if (grupo.usuario && grupo.usuario.usuStrEmail) {
-      await this.mailService.sendStatusCandidaturaEmail(
-        grupo.usuario.usuStrEmail,
-        demanda.demStrNome,
-        'Pendente (Aguardando avaliação do Coordenador)',
-      );
+      try {
+        await this.mailService.sendStatusCandidaturaEmail(
+          'GRUPO',
+          grupo.usuario.usuStrEmail,
+          demanda.demStrNome,
+          'Pendente (Aguardando avaliação do Coordenador)',
+        );
+      } catch (error) {
+        console.error('Falha ao enviar e-mail de notificação para grupo:', error);
+      }
     }
 
     return candidaturaSalva;

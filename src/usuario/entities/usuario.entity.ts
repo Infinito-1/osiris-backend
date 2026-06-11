@@ -32,10 +32,30 @@ export class Usuario {
   @Column({ name: 'usu_bool_ativo', default: true })
   usuBoolAtivo!: boolean;
 
-  // Novas colunas para o fluxo de verificação de e-mail
+  // ===== VERIFICAÇÃO DE EMAIL =====
+
   @Column({ name: 'usu_bool_confirmado', default: false })
   usuBoolConfirmado!: boolean;
 
-  @Column({ name: 'usu_str_token_confirmacao', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'usu_str_token_confirmacao',
+    type: 'varchar',
+    length: 255,
+    nullable: true
+  })
   usuStrTokenConfirmacao?: string | null;
+
+  @Column({
+    name: 'usu_str_codigo_ativacao',
+    type: 'varchar',
+    length: 6,
+    nullable: true
+  })
+  codigo_ativacao?: string;
+
+  @Column({
+    name: 'usu_bool_conta_ativa',
+    default: false
+  })
+  conta_ativa!: boolean;
 }

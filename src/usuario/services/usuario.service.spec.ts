@@ -48,23 +48,23 @@ describe('UsuarioService', () => {
       usuStrEmail: 'maria.silva@aluno.cps.sp.gov.br',
       usuStrSenha: 'password123',
       usuStrTipo: 'Grupo',
+      usuStrTelefone: '11999999999'
     };
 
-    it('deve cadastrar um usuário líder de grupo com e-mail institucional e disparar e-mail de confirmação', async () => {
-      mockUsuarioRepository.findOne.mockResolvedValue(null); // Nenhum e-mail duplicado
+    it('deve cadastrar um usuário e disparar e-mail de confirmação', async () => {
+      mockUsuarioRepository.findOne.mockResolvedValue(null);
       
       const mockSavedUsuario = {
         usuIntId: 1,
         ...createDto,
         usuBoolAtivo: false,
         usuBoolConfirmado: false,
-        usuStrTokenConfirmacao: 'mocked-token-123',
+        codigo_ativacao: '123456',
       };
 
       mockUsuarioRepository.create.mockReturnValue(mockSavedUsuario);
       mockUsuarioRepository.save.mockResolvedValue(mockSavedUsuario);
 
-      // Espiona a geração do hash do bcrypt para garantir que ele aconteça
       jest.spyOn(bcrypt, 'hash').mockImplementation(async () => 'hashed_password');
 
       const resultado = await service.create(createDto);
@@ -118,15 +118,13 @@ describe('UsuarioService', () => {
     });
   });
 
-  describe('confirmarEmail', () => {
-    it('deve ativar a conta do usuário e retornar o redirecionamento correto para o painel de grupos', async () => {
+  describe('confirmarCodigo', () => {
+    it('deve ativar a conta do usuário corretamente', async () => {
       const mockUsuarioInativo = {
         usuIntId: 1,
-        usuStrNome: 'Maria Silva',
-        usuStrTipo: 'Grupo',
+        codigo_ativacao: '221003',
         usuBoolConfirmado: false,
         usuBoolAtivo: false,
-        usuStrTokenConfirmacao: 'token-valido',
       };
 
       mockUsuarioRepository.findOne.mockResolvedValue(mockUsuarioInativo);
@@ -134,15 +132,23 @@ describe('UsuarioService', () => {
         ...mockUsuarioInativo,
         usuBoolConfirmado: true,
         usuBoolAtivo: true,
-        usuStrTokenConfirmacao: null,
+        codigo_ativacao: undefined,
       });
 
-      const resultado = await service.confirmarEmail('token-valido');
+      // Passamos o email vazio '' pois o método no service recebe (email, codigo)
+      const resultado = await service.confirmarCodigo('', '221003');
 
       expect(resultado.statusCode).toBe(HttpStatus.OK);
-      expect(resultado.redirectTo).toBe('/grupos/dashboard');
+      expect(resultado.message).toBe('Conta confirmada com sucesso!');
       expect(mockUsuarioInativo.usuBoolConfirmado).toBe(true);
-      expect(mockUsuarioInativo.usuBoolAtivo).toBe(true);
+    });
+
+    it('deve lançar erro 404 se o código for inválido', async () => {
+      mockUsuarioRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.confirmarCodigo('', '000000')).rejects.toThrow(
+        new HttpException('Código de ativação inválido ou usuário não encontrado', HttpStatus.NOT_FOUND),
+      );
     });
   });
 });

@@ -63,49 +63,46 @@ export class AdminService {
       },
     );
 
-    // TODO: ativar quando email estiver configurado para notificações de ações:
-    // if (destinatarioEmail && mensagemNotificacao) {
-    //   await this.mailService.sendGenericEmail(destinatarioEmail, 'Alteração na plataforma Osiris', mensagemNotificacao);
-    //   log.logBoolEmailEnviado = true;
-    //   log.logDateEmailEnviado = new Date();
-    //   await this.logRepository.save(log);
-    // }
+    if (destinatarioEmail && mensagem) {
+      try {
+        await this.mailService.sendConfirmationEmail(
+          'ADMIN',
+          destinatarioEmail,
+          mensagem,
+        );
+      } catch (error) {
+        console.error(
+          `[AdminService] Falha ao enviar e-mail para ${destinatarioEmail}:`,
+          error,
+        );
+      }
+    }
   }
 
   // private async notificarAlteracao(emailDestino: string, mensagem: string) {
-  //   const notificacao = {
-  //     emailDestino,
-  //     mensagem,
-  //     data: new Date().toISOString(),
-  //   };
+  //   const notificacao = { emailDestino, mensagem, data: new Date().toISOString() };
   //   this.notificationsLogs.push(notificacao);
   //   console.log(`[NOTIFICAÇÃO] Para: ${emailDestino} - ${mensagem}`);
 
-  //   // Dispara a notificação real usando a infraestrutura do MailModule
   //   try {
-  //     await this.mailService.sendConfirmationEmail(
-  //       emailDestino,
-  //       `Notificação Osiris: ${mensagem}`,
-  //     );
+  //     // CORRIGIDO: Passando 'ADMIN' como primeira entidade
+  //     await this.mailService.sendConfirmationEmail('ADMIN', emailDestino, `Notificação Osiris: ${mensagem}`);
   //   } catch (error) {
-  //     console.error(
-  //       `Falha ao disparar e-mail de notificação para ${emailDestino}:`,
-  //       error,
-  //     );
+  //     console.error(`Falha ao disparar e-mail de notificação para ${emailDestino}:`, error);
   //   }
   // }
 
   async criarAdmin(dto: CreateAdminDto): Promise<Admin> {
-    const { usuarioId } = dto;
+    const { usuIntId } = dto;
 
     const usuario = await this.usuarioRepository.findOne({
-      where: { usuIntId: usuarioId },
+      where: { usuIntId: usuIntId },
     });
     if (!usuario)
       throw new HttpException('Usuário não encontrado', HttpStatus.NOT_FOUND);
 
     const adminExistente = await this.adminRepository.findOne({
-      where: { usuario: { usuIntId: usuarioId } },
+      where: { usuario: { usuIntId: usuIntId } },
     });
     if (adminExistente) {
       if (!adminExistente.admBoolAtivo) {
@@ -130,7 +127,7 @@ export class AdminService {
     await this.registrarAuditoria(
       'Criar Admin',
       'Usuario',
-      usuarioId,
+      usuIntId,
       { usuIntId: usuario.usuIntId, usuStrEmail: usuario.usuStrEmail },
       usuario.usuStrEmail,
       usuario.usuStrEmail,
@@ -681,7 +678,10 @@ export class AdminService {
     // 2. Cria o perfil vinculado
     try {
       if (dto.usuStrTipo === 'Coordenador') {
-        console.log('[AdminService] Chamando coordenadorService.create com usuarioId:', usuarioId);
+        console.log(
+          '[AdminService] Chamando coordenadorService.create com usuarioId:',
+          usuarioId,
+        );
         await this.coordenadorService.create({
           usuIntId: usuarioId,
           cooStrCurso: dto.cooStrCurso ?? 'Não informado',
@@ -703,6 +703,9 @@ export class AdminService {
           gruStrMembros: dto.gruStrMembros,
           semIntId: dto.semIntId ?? 1,
         });
+      } else if (dto.usuStrTipo === 'Admin') {
+        // criarAdmin espera um usuarioId de usuário já existente
+        await this.criarAdmin({ usuIntId: usuarioId });
       }
     } catch (err) {
       console.error('[AdminService] Erro ao criar perfil vinculado:', err);

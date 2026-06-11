@@ -7,6 +7,7 @@ import { Demanda } from '../../demanda/entities/demanda.entity';
 import { Candidatura } from '../../candidatura/entities/candidatura.entity';
 import { CreateEmpreendedorDto } from '../dto/create-empreendedor.dto';
 import { UpdateEmpreendedorDto } from '../dto/update-empreendedor.dto';
+import { MailService } from '../../mail/mail.service'; // Importação adicionada
 
 @Injectable()
 export class EmpreendedorService {
@@ -19,6 +20,7 @@ export class EmpreendedorService {
     private readonly demandaRepository: Repository<Demanda>,
     @InjectRepository(Candidatura)
     private readonly candidaturaRepository: Repository<Candidatura>,
+    private readonly mailService: MailService, // Injeção do MailService
   ) {}
 
   async findAll(): Promise<Empreendedor[]> {
@@ -64,7 +66,6 @@ export class EmpreendedorService {
       );
     }
 
-    // Alinha a Role do usuário com o perfil criado no ecossistema
     usuario.usuStrTipo = 'Empreendedor';
     await this.usuarioRepository.save(usuario);
 
