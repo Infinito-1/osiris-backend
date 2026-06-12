@@ -10,7 +10,7 @@ export class ProdService implements TypeOrmOptionsFactory {
       logging: false,
       dropSchema: false,
       ssl: { rejectUnauthorized: false },
-      synchronize: false,
+      synchronize: process.env.DB_SYNC === 'true',
       autoLoadEntities: true,
       migrations: [__dirname + '/../../migrations/**/*.js'], // Ajustado o nível de subida da pasta para o build (dist/)
       migrationsRun: false,  // Em produção, o ideal é rodar via script de CI/CD.
