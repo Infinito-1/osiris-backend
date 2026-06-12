@@ -9,7 +9,7 @@ export class ProdService implements TypeOrmOptionsFactory {
       url: process.env.DATABASE_URL,
       logging: false,
       dropSchema: false,
-      ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
+      ssl: { rejectUnauthorized: false },
       synchronize: false,
       autoLoadEntities: true,
       migrations: [__dirname + '/../../migrations/**/*.js'], // Ajustado o nível de subida da pasta para o build (dist/)

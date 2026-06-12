@@ -16,22 +16,24 @@ import { SemestreModule } from './semestre/semestre.module';
 import { TipoDemandaModule } from './tipo_demanda/tipo_demanda.module';
 import { UsuarioModule } from './usuario/usuario.module';
 import { AdminModule } from './admin/admin.module';
-import { AuthModule } from './auth/auth.module'; 
+import { AuthModule } from './auth/auth.module';
 import { MailModule } from './mail/mail.module';
+import { ProdService } from './data/prod.service';
 
 @Module({
   imports: [
     // Configura o carregamento do .env de forma global na aplicação
-    ConfigModule.forRoot({ 
+    ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env' 
+      envFilePath: '.env',
     }),
-    
+
     TypeOrmModule.forRootAsync({
-      useClass: DevService,
+      useClass:
+        process.env.NODE_ENV === 'production' ? ProdService : DevService,
       imports: [ConfigModule],
     }),
-    
+
     GrupoModule,
     EmpreendedorModule,
     CoordenadorModule,
